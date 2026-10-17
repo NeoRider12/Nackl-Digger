@@ -4,7 +4,7 @@ A small Windows desktop app for mining NACKL with the [Acki Nacki Bee Engine](ht
 
 **Every tap is a real click.** You dig on a honeycomb pad; only genuine user input counts (synthetic events are ignored, clicks faster than 90 ms are dropped). There is no auto-tapper.
 
-![logo](assets/logo-1024.png)
+<p align="center"><img src="assets/logo-1024.png" width="160" alt="NeoRiders Nackl Digger"></p>
 
 ## How it works
 
