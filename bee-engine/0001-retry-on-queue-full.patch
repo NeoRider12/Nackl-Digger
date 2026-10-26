@@ -1,0 +1,217 @@
+diff --git a/bee_miner/src/wasm/miner.rs b/bee_miner/src/wasm/miner.rs
+index 1e95951..1c9042f 100644
+--- a/bee_miner/src/wasm/miner.rs
++++ b/bee_miner/src/wasm/miner.rs
+@@ -41,6 +41,9 @@ pub struct Miner {
+     complexity: Rc<Cell<(u32, u32)>>,
+     workers: Rc<RefCell<Vec<MinerWorker>>>,
+     dropped: Rc<Cell<bool>>,
++    // NeoRider patch: until this timestamp (ms since epoch) submissions that fail
++    // with a full external-message queue (TVM 621) are retried every few seconds.
++    submit_deadline_ms: Rc<Cell<u64>>,
+ }
+ 
+ impl Drop for Miner {
+@@ -106,6 +109,7 @@ impl Miner {
+             complexity: Rc::new(Cell::new(complexity)),
+             workers: Rc::new(RefCell::new(Vec::new())),
+             dropped: Rc::new(Cell::new(false)),
++            submit_deadline_ms: Rc::new(Cell::new(0)),
+         };
+ 
+         // Start internal thread, which will catch miner contract events
+@@ -231,6 +235,7 @@ impl Miner {
+             seeds_ref,
+             workers_ref,
+             callback,
++            self.submit_deadline_ms.clone(),
+         ));
+ 
+         Ok(())
+@@ -259,6 +264,22 @@ impl Miner {
+         Ok(())
+     }
+ 
++    /// NeoRider patch: retry submissions rejected with "queue is full" (621)
++    /// until `deadline_ms` (JS `Date.now()` scale). 0 disables retries.
++    #[wasm_bindgen(js_name = set_submit_deadline)]
++    pub fn set_submit_deadline(&self, deadline_ms: f64) {
++        let value = if deadline_ms.is_finite() && deadline_ms > 0.0 { deadline_ms as u64 } else { 0 };
++        self.submit_deadline_ms.set(value);
++    }
++
++    /// NeoRider patch: interval between submission retries in ms (clamped to 1000–10000).
++    #[wasm_bindgen(js_name = set_submit_retry_ms)]
++    pub fn set_submit_retry_ms(&self, ms: f64) {
++        if ms.is_finite() && ms > 0.0 {
++            crate::wasm::worker::set_submit_retry_ms(ms as u64);
++        }
++    }
++
+     #[wasm_bindgen(js_name = remove_seed)]
+     pub fn remove_seed(&self, seed: String) {
+         self.seeds.borrow_mut().retain(|v| v != &seed);
+diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
+index 12f44c6..5fb6e77 100644
+--- a/bee_miner/src/wasm/mod.rs
++++ b/bee_miner/src/wasm/mod.rs
+@@ -1,4 +1,5 @@
+ use ackinacki_kit::contracts::deserialize::deserialize_u128;
++use ackinacki_kit::contracts::deserialize::deserialize_u32;
+ use ackinacki_kit::contracts::deserialize::deserialize_u64;
+ use ackinacki_kit::contracts::event::query_events;
+ use ackinacki_kit::contracts::mvsystem;
+@@ -37,6 +38,13 @@ pub struct MinerAccountData {
+ 
+     #[serde(alias = "_tapSum5m", deserialize_with = "deserialize_u128")]
+     pub tap_sum_5m: u128,
++
++    // NeoRider patch: current mining difficulty, for display in the app.
++    #[serde(alias = "_easyComplexity", deserialize_with = "deserialize_u32", default)]
++    pub easy_complexity: u32,
++
++    #[serde(alias = "_hardComplexity", deserialize_with = "deserialize_u32", default)]
++    pub hard_complexity: u32,
+ }
+ 
+ #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
+index 2874589..2759528 100644
+--- a/bee_miner/src/wasm/worker.rs
++++ b/bee_miner/src/wasm/worker.rs
+@@ -1,3 +1,4 @@
++use std::cell::Cell;
+ use std::cell::RefCell;
+ use std::collections::VecDeque;
+ use std::fmt::Display;
+@@ -98,6 +99,7 @@ pub(crate) async fn run(
+     seeds_ref: Rc<RefCell<VecDeque<String>>>,
+     workers_ref: Rc<RefCell<Vec<MinerWorker>>>,
+     callback: js_sys::Function,
++    submit_deadline_ms: Rc<Cell<u64>>,
+ ) {
+     // Set worker status and post callback
+     update_worker_status(worker.id, &workers_ref, MinerStatus::Computing);
+@@ -199,7 +201,18 @@ pub(crate) async fn run(
+     );
+ 
+     let signer = Signer::Keys { keys: worker.keys.clone() };
+-    match submit_session_root(&worker, (&time_tree, &tap_tree), signer.clone()).await {
++    let mut root_attempt: u32 = 0;
++    let root_result = loop {
++        match submit_session_root(&worker, (&time_tree, &tap_tree), signer.clone()).await {
++            Ok(v) => break Ok(v),
++            Err(e) => {
++                if !wait_before_retry(&e, &submit_deadline_ms, &mut root_attempt, worker.id, "root", &callback).await {
++                    break Err(e);
++                }
++            }
++        }
++    };
++    match root_result {
+         Ok(_) => send_callback(
+             &callback,
+             CallbackData::data("submit_session_root", Some(json!({"worker_id": worker.id}))),
+@@ -223,9 +236,20 @@ pub(crate) async fn run(
+     while let Some(command) = worker_receiver.next().await {
+         match command {
+             MinerCommand::SendSessionInterval(data) => {
+-                let cores = (&mut time_core, &mut tap_core);
+-                let trees = (&time_tree, &tap_tree);
+-                match submit_session_proof(&worker, cores, trees, data, signer.clone()).await {
++                let mut proof_attempt: u32 = 0;
++                let proof_result = loop {
++                    let cores = (&mut time_core, &mut tap_core);
++                    let trees = (&time_tree, &tap_tree);
++                    match submit_session_proof(&worker, cores, trees, data.clone(), signer.clone()).await {
++                        Ok(v) => break Ok(v),
++                        Err(e) => {
++                            if !wait_before_retry(&e, &submit_deadline_ms, &mut proof_attempt, worker.id, "proof", &callback).await {
++                                break Err(e);
++                            }
++                        }
++                    }
++                };
++                match proof_result {
+                     Ok(_) => {
+                         send_callback(
+                             &callback,
+@@ -277,6 +301,78 @@ pub(crate) async fn run(
+     shutdown_worker(&worker, &workers_ref, true, false, &callback);
+ }
+ 
++// NeoRider patch: pause between retries of a submission that failed because the
++// node's external-message queue is full (TVM 621) or the request timed out /
++// could not reach the endpoint (client error 11, overloaded node).
++const SUBMIT_RETRY_DEFAULT_MS: u64 = 5000;
++
++thread_local! {
++    static SUBMIT_RETRY_MS: Cell<u64> = const { Cell::new(SUBMIT_RETRY_DEFAULT_MS) };
++}
++
++/// Interval between submission retries (1–10 s, set by the app).
++pub(crate) fn set_submit_retry_ms(ms: u64) {
++    SUBMIT_RETRY_MS.with(|c| c.set(ms.clamp(1000, 10000)));
++}
++
++fn submit_retry_ms() -> u64 {
++    SUBMIT_RETRY_MS.with(|c| c.get())
++}
++
++fn is_retryable(error: &str) -> bool {
++    let e = error.to_lowercase();
++    e.contains("621")
++        || e.contains("queue is full")
++        || e.contains("timeout")
++        || e.contains("timed out")
++        || e.contains("failed to fetch")
++        || e.contains("networkerror")
++        // Überlasteter Node antwortet mit leerem Body (Client-Fehler 12)
++        || e.contains("can not parse http request")
++        || e.contains("not a valid json")
++        || e.contains("eof while parsing")
++        // Mit nativen Netzwerkaufrufen kommen echte HTTP-Fehler statt "Failed to fetch"
++        || e.contains("invalid server response")
++        || e.contains("too many requests")
++        || e.contains(" 429")
++        || e.contains(" 502")
++        || e.contains(" 503")
++        || e.contains(" 504")
++}
++
++/// Returns `true` (after waiting) when the failed submission should be retried.
++async fn wait_before_retry(
++    error: &str,
++    deadline_ms: &Rc<Cell<u64>>,
++    attempt: &mut u32,
++    worker_id: u64,
++    stage: &str,
++    callback: &js_sys::Function,
++) -> bool {
++    let deadline = deadline_ms.get();
++    let now = js_sys::Date::now() as u64;
++    let retry_ms = submit_retry_ms();
++    if !is_retryable(error) || deadline == 0 || now + retry_ms > deadline {
++        return false;
++    }
++    *attempt += 1;
++    send_callback(
++        callback,
++        CallbackData::data(
++            "submit_retry",
++            Some(json!({
++                "worker_id": worker_id,
++                "stage": stage,
++                "attempt": *attempt,
++                "retry_in_ms": retry_ms,
++                "message": error,
++            })),
++        ),
++    );
++    gloo_timers::future::TimeoutFuture::new(retry_ms as u32).await;
++    true
++}
++
+ fn send_callback(callback: &js_sys::Function, arg: CallbackData) {
+     let _ = callback.call1(&JsValue::NULL, &serde_json::to_string(&arg).unwrap().into());
+ }
