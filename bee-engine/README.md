@@ -15,6 +15,7 @@ This folder is the corresponding source of the modification.
 
 - **Resubmission:** session root and proof are sent again when the node answers *queue is full* (TVM 621), times out, or returns gateway errors (429/502/503/504, empty or invalid replies) – until a deadline set by the app.
 - **New functions:** `Miner.set_submit_deadline(ms)` and `Miner.set_submit_retry_ms(ms)` (interval, clamped to 1–10 s).
+- **Event polling:** the miner reads its contract events every 2.5 s only while a session is running, otherwise every 10 s (fewer requests, less rate limiting).
 - **Mining difficulty:** `hard_complexity` / `easy_complexity` are read from the miner contract and returned by `get_miner_data`.
 
 No other files are changed.
