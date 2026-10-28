@@ -89,7 +89,7 @@ index 12f44c6..5fb6e77 100644
  
  #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
-index 2874589..2759528 100644
+index 2874589..a5c638d 100644
 --- a/bee_miner/src/wasm/worker.rs
 +++ b/bee_miner/src/wasm/worker.rs
 @@ -1,3 +1,4 @@
@@ -105,7 +105,7 @@ index 2874589..2759528 100644
  ) {
      // Set worker status and post callback
      update_worker_status(worker.id, &workers_ref, MinerStatus::Computing);
-@@ -199,7 +201,18 @@ pub(crate) async fn run(
+@@ -199,7 +201,21 @@ pub(crate) async fn run(
      );
  
      let signer = Signer::Keys { keys: worker.keys.clone() };
@@ -113,7 +113,10 @@ index 2874589..2759528 100644
 +    let mut root_attempt: u32 = 0;
 +    let root_result = loop {
 +        match submit_session_root(&worker, (&time_tree, &tap_tree), signer.clone()).await {
-+            Ok(v) => break Ok(v),
++            Ok(_) => break Ok(()),
++            // NeoRider patch: an earlier attempt (or the parallel copy to the other
++            // endpoint) already delivered this message – treat as submitted.
++            Err(e) if already_delivered(&e) => break Ok(()),
 +            Err(e) => {
 +                if !wait_before_retry(&e, &submit_deadline_ms, &mut root_attempt, worker.id, "root", &callback).await {
 +                    break Err(e);
@@ -125,7 +128,7 @@ index 2874589..2759528 100644
          Ok(_) => send_callback(
              &callback,
              CallbackData::data("submit_session_root", Some(json!({"worker_id": worker.id}))),
-@@ -223,9 +236,20 @@ pub(crate) async fn run(
+@@ -223,9 +239,21 @@ pub(crate) async fn run(
      while let Some(command) = worker_receiver.next().await {
          match command {
              MinerCommand::SendSessionInterval(data) => {
@@ -137,7 +140,8 @@ index 2874589..2759528 100644
 +                    let cores = (&mut time_core, &mut tap_core);
 +                    let trees = (&time_tree, &tap_tree);
 +                    match submit_session_proof(&worker, cores, trees, data.clone(), signer.clone()).await {
-+                        Ok(v) => break Ok(v),
++                        Ok(_) => break Ok(()),
++                        Err(e) if already_delivered(&e) => break Ok(()),
 +                        Err(e) => {
 +                            if !wait_before_retry(&e, &submit_deadline_ms, &mut proof_attempt, worker.id, "proof", &callback).await {
 +                                break Err(e);
@@ -149,7 +153,7 @@ index 2874589..2759528 100644
                      Ok(_) => {
                          send_callback(
                              &callback,
-@@ -277,6 +301,78 @@ pub(crate) async fn run(
+@@ -277,6 +305,83 @@ pub(crate) async fn run(
      shutdown_worker(&worker, &workers_ref, true, false, &callback);
  }
  
@@ -190,6 +194,11 @@ index 2874589..2759528 100644
 +        || e.contains(" 502")
 +        || e.contains(" 503")
 +        || e.contains(" 504")
++}
++
++/// NeoRider patch: the node already knows this external message (DUPLICATE_MESSAGE).
++fn already_delivered(error: &str) -> bool {
++    error.to_lowercase().contains("duplicate_message")
 +}
 +
 +/// Returns `true` (after waiting) when the failed submission should be retried.
