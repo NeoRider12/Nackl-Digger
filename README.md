@@ -54,7 +54,7 @@ The app ID was issued by the Acki Nacki team, and the app is shared with their p
 2. Switch the wallet **ON** and tap the pad. Up to 70 taps per epoch (~5.5 min) count; the full reward needs about 2 minutes between the first and the last tap.
 3. After the session the app submits root and proof and shows the result under the pad (`✓ confirmed` or `✗ …`). Payouts arrive about two epochs later.
 
-Tip: with several wallets, a resend interval of 2–3 s is a good balance.
+Tip: with several wallets, a resend interval of 2–3 s is a good balance. Running many wallets on several devices over one internet connection with 1–2 s? If the log shows frequent *429 Too Many Requests*, switch off *Cloudflare DNS* under ⚙ → Advanced options.
 
 ## Security and privacy
 
