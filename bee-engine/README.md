@@ -15,7 +15,7 @@ This folder is the corresponding source of the modification.
 
 - **Resubmission:** session root and proof are sent again when the node answers *queue is full* (TVM 621), times out, or returns gateway errors (429/502/503/504, empty or invalid replies) – until a deadline set by the app.
 - **Signed once, resent unchanged:** root and proof messages are signed once (`PreparedMessage` from ackinacki-kit) and the identical message is resent on every retry, so the node sees a duplicate instead of a second copy. It is signed again only shortly before it would expire.
-- **Already stored:** when a retry is rejected in the compute phase after an earlier attempt, the miner contract is checked (`getDetails`); if the session root is already stored, the session continues. Contract rejections are not retried.
+- **Already stored:** when a retry is rejected in the compute phase after an earlier attempt, the miner contract is checked (`getDetails`); if exactly this session's root is already stored, the session continues (stored data of an older session does not count). Contract rejections are not retried.
 - **Already delivered:** a `DUPLICATE_MESSAGE` answer (an earlier attempt or the parallel copy to the other endpoint already got through) counts as submitted instead of failing the session.
 - **Message lifetime:** miner messages expire after 120 s instead of the SDK default of 40 s, so they survive long node queues.
 - **New functions:** `Miner.set_submit_deadline(ms)` and `Miner.set_submit_retry_ms(ms)` (interval, clamped to 1–10 s).

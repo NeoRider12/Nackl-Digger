@@ -100,7 +100,7 @@ index 12f44c6..5fb6e77 100644
  
  #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
-index 2874589..9120585 100644
+index 2874589..ebfac1a 100644
 --- a/bee_miner/src/wasm/worker.rs
 +++ b/bee_miner/src/wasm/worker.rs
 @@ -1,14 +1,18 @@
@@ -147,7 +147,7 @@ index 2874589..9120585 100644
 +            // NeoRider patch: the message was executed but failed. After an earlier
 +            // attempt this usually means that attempt already stored the root –
 +            // check the miner contract before giving up.
-+            Err(e) if executed_and_failed(&e) && root_attempt > 0 && root_stored(&worker).await => {
++            Err(e) if executed_and_failed(&e) && root_attempt > 0 && root_stored(&worker, (&time_tree, &tap_tree)).await => {
 +                send_callback(
 +                    &callback,
 +                    CallbackData::data(
@@ -217,7 +217,7 @@ index 2874589..9120585 100644
                      Ok(_) => {
                          send_callback(
                              &callback,
-@@ -277,6 +347,144 @@ pub(crate) async fn run(
+@@ -277,6 +347,168 @@ pub(crate) async fn run(
      shutdown_worker(&worker, &workers_ref, true, false, &callback);
  }
  
@@ -280,12 +280,36 @@ index 2874589..9120585 100644
 +    e.contains("compute phase") && !e.contains("queue is full")
 +}
 +
-+/// NeoRider patch: the miner contract already holds submitted session data.
-+async fn root_stored(worker: &MinerWorker) -> bool {
++/// NeoRider patch: the miner contract already holds exactly this session's root.
++/// (Stored data of an earlier, unfinished session does not count – that one has to be
++/// cleared, otherwise the worker would wait for an interval event that never comes.)
++async fn root_stored(
++    worker: &MinerWorker,
++    trees: (&ResultOfGetMerkleSnapshot, &ResultOfGetMerkleSnapshot),
++) -> bool {
++    let Ok(expected) = session_root_data(trees) else {
++        return false;
++    };
 +    match worker.contract.get_details().await {
-+        Ok(details) => details.submit_session_data.is_some(),
++        Ok(details) => details
++            .submit_session_data
++            .map(|stored| stored.trim_start_matches("0x").eq_ignore_ascii_case(&expected))
++            .unwrap_or(false),
 +        Err(_) => false,
 +    }
++}
++
++/// Hex payload of `setCommitData` for these trees.
++fn session_root_data(
++    trees: (&ResultOfGetMerkleSnapshot, &ResultOfGetMerkleSnapshot),
++) -> Result<String, String> {
++    let easy_params =
++        SessionSubmit { root: trees.0.root.clone(), leaves_count: trees.0.leaves.len() as u64 };
++    let hard_params =
++        SessionSubmit { root: trees.1.root.clone(), leaves_count: trees.1.leaves.len() as u64 };
++    let bytes = verifier::combine_bytes(&[&easy_params, &hard_params])
++        .map_err(|e| format!("Serialize submit session params to bytes ({e})"))?;
++    Ok(hex::encode(bytes))
 +}
 +
 +/// Messages are signed again this long after signing, shortly before they expire.
@@ -362,7 +386,7 @@ index 2874589..9120585 100644
  fn send_callback(callback: &js_sys::Function, arg: CallbackData) {
      let _ = callback.call1(&JsValue::NULL, &serde_json::to_string(&arg).unwrap().into());
  }
-@@ -348,6 +556,7 @@ async fn submit_session_root(
+@@ -348,6 +580,7 @@ async fn submit_session_root(
      worker: &MinerWorker,
      trees: (&ResultOfGetMerkleSnapshot, &ResultOfGetMerkleSnapshot),
      signer: Signer,
@@ -370,7 +394,7 @@ index 2874589..9120585 100644
  ) -> Result<(), String> {
      let easy_params =
          SessionSubmit { root: trees.0.root.clone(), leaves_count: trees.0.leaves.len() as u64 };
-@@ -357,32 +566,34 @@ async fn submit_session_root(
+@@ -357,32 +590,34 @@ async fn submit_session_root(
      let submit_session_params_bytes = verifier::combine_bytes(&[&easy_params, &hard_params])
          .map_err(|e| format!("Serialize submit session params to bytes ({e})"))?;
  
@@ -425,7 +449,7 @@ index 2874589..9120585 100644
      let easy_core = cores.0;
      let hard_core = cores.1;
      let hard_tree = trees.1;
-@@ -440,26 +651,37 @@ async fn submit_session_proof(
+@@ -440,26 +675,37 @@ async fn submit_session_proof(
      let event_data = String::try_from(DecodedSessionStatusData { worker_id: worker.id })
          .map_err(|e| format!("Serialize event data ({e})"))?;
  
