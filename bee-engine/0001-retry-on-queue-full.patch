@@ -100,7 +100,7 @@ index 12f44c6..5fb6e77 100644
  
  #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
-index 2874589..0ce19a8 100644
+index 2874589..15bc926 100644
 --- a/bee_miner/src/wasm/worker.rs
 +++ b/bee_miner/src/wasm/worker.rs
 @@ -1,14 +1,20 @@
@@ -180,7 +180,7 @@ index 2874589..0ce19a8 100644
          Ok(_) => send_callback(
              &callback,
              CallbackData::data("submit_session_root", Some(json!({"worker_id": worker.id}))),
-@@ -219,14 +257,158 @@ pub(crate) async fn run(
+@@ -219,14 +257,165 @@ pub(crate) async fn run(
          }
      }
  
@@ -218,8 +218,15 @@ index 2874589..0ce19a8 100644
 +                    continue;
 +                }
 +                last_chain_check = now;
-+                let Ok(state) = read_commit_state(&worker).await else {
-+                    continue;
++                let state = match read_commit_state(&worker).await {
++                    Ok(state) => state,
++                    Err(e) => {
++                        send_callback(
++                            &callback,
++                            CallbackData::data("chain_read_failed", Some(json!({"worker_id": worker.id, "message": e}))),
++                        );
++                        continue;
++                    }
 +                };
 +                let ours = state
 +                    .commit_data
@@ -344,7 +351,7 @@ index 2874589..0ce19a8 100644
                          send_callback(
                              &callback,
                              CallbackData::data(
-@@ -274,7 +456,199 @@ pub(crate) async fn run(
+@@ -274,7 +463,199 @@ pub(crate) async fn run(
      }
  
      // Update worker status and remove from workers
@@ -545,7 +552,7 @@ index 2874589..0ce19a8 100644
  }
  
  fn send_callback(callback: &js_sys::Function, arg: CallbackData) {
-@@ -348,6 +722,7 @@ async fn submit_session_root(
+@@ -348,6 +729,7 @@ async fn submit_session_root(
      worker: &MinerWorker,
      trees: (&ResultOfGetMerkleSnapshot, &ResultOfGetMerkleSnapshot),
      signer: Signer,
@@ -553,7 +560,7 @@ index 2874589..0ce19a8 100644
  ) -> Result<(), String> {
      let easy_params =
          SessionSubmit { root: trees.0.root.clone(), leaves_count: trees.0.leaves.len() as u64 };
-@@ -357,32 +732,34 @@ async fn submit_session_root(
+@@ -357,32 +739,34 @@ async fn submit_session_root(
      let submit_session_params_bytes = verifier::combine_bytes(&[&easy_params, &hard_params])
          .map_err(|e| format!("Serialize submit session params to bytes ({e})"))?;
  
@@ -608,7 +615,7 @@ index 2874589..0ce19a8 100644
      let easy_core = cores.0;
      let hard_core = cores.1;
      let hard_tree = trees.1;
-@@ -440,26 +817,37 @@ async fn submit_session_proof(
+@@ -440,26 +824,37 @@ async fn submit_session_proof(
      let event_data = String::try_from(DecodedSessionStatusData { worker_id: worker.id })
          .map_err(|e| format!("Serialize event data ({e})"))?;
  
