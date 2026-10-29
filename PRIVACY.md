@@ -28,4 +28,4 @@ Only internet access. The screen is kept on while digging without any extra perm
 
 ## Contact
 
-Via the issues of this repository or via Telegram (NeoRider).
+Via the issues of this repository or via Telegram (@NeoRider1).

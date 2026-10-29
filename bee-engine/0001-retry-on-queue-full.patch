@@ -100,10 +100,10 @@ index 12f44c6..5fb6e77 100644
  
  #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
-index 2874589..ebfac1a 100644
+index 2874589..0ce19a8 100644
 --- a/bee_miner/src/wasm/worker.rs
 +++ b/bee_miner/src/wasm/worker.rs
-@@ -1,14 +1,18 @@
+@@ -1,14 +1,20 @@
 +use std::cell::Cell;
  use std::cell::RefCell;
  use std::collections::VecDeque;
@@ -116,13 +116,25 @@ index 2874589..ebfac1a 100644
  use ackinacki_kit::contracts::mvsystem::miner::contract::ParamsOfVerifySession;
  use ackinacki_kit::contracts::traits::AccountAccessor;
  use ackinacki_kit::contracts::traits::DecodeAccountData;
++use ackinacki_kit::contracts::traits::GetMethodAccessor;
++use ackinacki_kit::contracts::mvsystem::miner::SessionInterval;
 +use ackinacki_kit::contracts::traits::SendMessage;
  use ackinacki_kit::shared::traits::guarded::AsyncGuarded;
 +use ackinacki_kit::tvm_client::abi::CallSet;
  use ackinacki_kit::tvm_client::abi::Signer;
  use ackinacki_kit::tvm_client::crypto::KeyPair;
  use bee_shared::miner::SessionProof;
-@@ -98,6 +102,7 @@ pub(crate) async fn run(
+@@ -17,7 +23,9 @@ use bee_shared::verifier;
+ use futures::channel::mpsc::UnboundedReceiver;
+ use futures::channel::mpsc::UnboundedSender;
+ use futures::StreamExt;
++use serde::Deserialize;
+ use serde::Serialize;
++use futures::FutureExt;
+ use serde_json::json;
+ use wasm_bindgen::JsValue;
+ 
+@@ -98,6 +106,7 @@ pub(crate) async fn run(
      seeds_ref: Rc<RefCell<VecDeque<String>>>,
      workers_ref: Rc<RefCell<Vec<MinerWorker>>>,
      callback: js_sys::Function,
@@ -130,7 +142,7 @@ index 2874589..ebfac1a 100644
  ) {
      // Set worker status and post callback
      update_worker_status(worker.id, &workers_ref, MinerStatus::Computing);
-@@ -199,7 +204,36 @@ pub(crate) async fn run(
+@@ -199,7 +208,36 @@ pub(crate) async fn run(
      );
  
      let signer = Signer::Keys { keys: worker.keys.clone() };
@@ -168,18 +180,130 @@ index 2874589..ebfac1a 100644
          Ok(_) => send_callback(
              &callback,
              CallbackData::data("submit_session_root", Some(json!({"worker_id": worker.id}))),
-@@ -223,9 +257,45 @@ pub(crate) async fn run(
-     while let Some(command) = worker_receiver.next().await {
+@@ -219,14 +257,158 @@ pub(crate) async fn run(
+         }
+     }
+ 
+-    // Wait for session interval event
+-    while let Some(command) = worker_receiver.next().await {
++    // Wait for session interval event.
++    // NeoRider patch: if the event does not arrive (missed by the event polling, or the
++    // root was accepted by the node but never executed), read the session state directly
++    // from the miner contract: take the interval from there, resend the root, or detect
++    // that the proof was accepted. Without this the worker waited until the app gave up.
++    let root_done_at = js_sys::Date::now() as u64;
++    let expected_root = session_root_data((&time_tree, &tap_tree)).unwrap_or_default();
++    let mut proof_sent_at: Option<u64> = None;
++    let mut proof_message: Option<(PreparedMessage, u64)> = None;
++    let mut proof_params: Option<ParamsOfVerifySession> = None;
++    let mut last_chain_check: u64 = 0;
++    let mut corrupted = false;
++    let mut cleared_reads: u32 = 0;
++    loop {
++        let next = {
++            let mut cmd = worker_receiver.next().fuse();
++            let mut tick = gloo_timers::future::TimeoutFuture::new(CHAIN_TICK_MS).fuse();
++            futures::select! {
++                c = cmd => Some(c),
++                _ = tick => None,
++            }
++        };
++        let command = match next {
++            Some(Some(command)) => command,
++            Some(None) => break,
++            None => {
++                let now = js_sys::Date::now() as u64;
++                let since = proof_sent_at.unwrap_or(root_done_at);
++                if now < since + CHAIN_FALLBACK_AFTER_MS || now < last_chain_check + CHAIN_CHECK_EVERY_MS {
++                    continue;
++                }
++                last_chain_check = now;
++                let Ok(state) = read_commit_state(&worker).await else {
++                    continue;
++                };
++                let ours = state
++                    .commit_data
++                    .as_deref()
++                    .map(|d| d.trim_start_matches("0x").eq_ignore_ascii_case(&expected_root))
++                    .unwrap_or(false);
++                let deadline = submit_deadline_ms.get();
++                let in_time = deadline != 0 && now < deadline;
++                if proof_sent_at.is_none() {
++                    if ours {
++                        let Some(pair) = state.commit_interval else {
++                            continue;
++                        };
++                        send_callback(
++                            &callback,
++                            CallbackData::data("interval_from_chain", Some(json!({"worker_id": worker.id}))),
++                        );
++                        MinerCommand::SendSessionInterval(mvsystem::miner::events::SessionIntervalData {
++                            easy: pair.value0,
++                            hard: pair.value1,
++                            worker_id: worker.id,
++                        })
++                    } else if in_time {
++                        // Root not on chain: resend the identical message (a duplicate is harmless)
++                        send_callback(
++                            &callback,
++                            CallbackData::data("root_resent", Some(json!({"worker_id": worker.id}))),
++                        );
++                        let _ = submit_session_root(&worker, (&time_tree, &tap_tree), signer.clone(), &mut root_message).await;
++                        continue;
++                    } else {
++                        send_callback(
++                            &callback,
++                            CallbackData::error(
++                                "submit_session_root",
++                                "Root was not executed",
++                                Some(json!({"worker_id": worker.id, "message": "root accepted by the node but not found on chain"})),
++                            ),
++                        );
++                        corrupted = true;
++                        break;
++                    }
++                } else {
++                    if !ours {
++                        // acceptTap removes the commit data only when the proof was accepted.
++                        // Two reads in a row, in case one node is still behind.
++                        cleared_reads += 1;
++                        if cleared_reads < 2 {
++                            continue;
++                        }
++                        send_callback(
++                            &callback,
++                            CallbackData::data(
++                                "session_accepted",
++                                Some(json!({"worker_id": worker.id, "result": "chain"})),
++                            ),
++                        );
++                        break;
++                    }
++                    cleared_reads = 0;
++                    if in_time {
++                        if let Some(params) = proof_params.clone() {
++                            send_callback(
++                                &callback,
++                                CallbackData::data("proof_resent", Some(json!({"worker_id": worker.id}))),
++                            );
++                            let _ = submit_session_proof(&worker, params, signer.clone(), &mut proof_message).await;
++                        }
++                    }
++                    continue;
++                }
++            }
++        };
          match command {
              MinerCommand::SendSessionInterval(data) => {
 -                let cores = (&mut time_core, &mut tap_core);
 -                let trees = (&time_tree, &tap_tree);
 -                match submit_session_proof(&worker, cores, trees, data, signer.clone()).await {
++                if proof_sent_at.is_some() {
++                    continue;
++                }
 +                let mut proof_attempt: u32 = 0;
 +                // NeoRider patch: proofs are computed and signed once per interval and the
 +                // same message is resent on retries.
-+                let mut proof_message: Option<(PreparedMessage, u64)> = None;
-+                let mut proof_params: Option<ParamsOfVerifySession> = None;
 +                let proof_result = loop {
 +                    if proof_params.is_none() {
 +                        let cores = (&mut time_core, &mut tap_core);
@@ -215,12 +339,19 @@ index 2874589..ebfac1a 100644
 +                };
 +                match proof_result {
                      Ok(_) => {
++                        proof_sent_at = Some(js_sys::Date::now() as u64);
++                        last_chain_check = 0;
                          send_callback(
                              &callback,
-@@ -277,6 +347,168 @@ pub(crate) async fn run(
-     shutdown_worker(&worker, &workers_ref, true, false, &callback);
- }
+                             CallbackData::data(
+@@ -274,7 +456,199 @@ pub(crate) async fn run(
+     }
  
+     // Update worker status and remove from workers
+-    shutdown_worker(&worker, &workers_ref, true, false, &callback);
++    shutdown_worker(&worker, &workers_ref, true, corrupted, &callback);
++}
++
 +// NeoRider patch: pause between retries of a submission that failed because the
 +// node's external-message queue is full (TVM 621) or the request timed out /
 +// could not reach the endpoint (client error 11, overloaded node).
@@ -312,6 +443,36 @@ index 2874589..ebfac1a 100644
 +    Ok(hex::encode(bytes))
 +}
 +
++/// NeoRider patch: chain fallback while waiting for the interval / the proof result.
++const CHAIN_TICK_MS: u32 = 2000;
++/// No event this long after the root (or proof) → start reading the miner contract.
++const CHAIN_FALLBACK_AFTER_MS: u64 = 20_000;
++/// … and then at most this often.
++const CHAIN_CHECK_EVERY_MS: u64 = 10_000;
++
++#[derive(Debug, Deserialize)]
++struct CommitIntervalPair {
++    value0: SessionInterval,
++    value1: SessionInterval,
++}
++
++#[derive(Debug, Deserialize)]
++struct CommitState {
++    #[serde(rename = "commitData")]
++    commit_data: Option<String>,
++    #[serde(rename = "commitInterval")]
++    commit_interval: Option<CommitIntervalPair>,
++}
++
++/// Session data currently stored in the miner contract (`getDetails`).
++async fn read_commit_state(worker: &MinerWorker) -> Result<CommitState, String> {
++    worker
++        .contract
++        .call_get_method::<CommitState>("getDetails")
++        .await
++        .map_err(|e| format!("Read miner details ({e})"))
++}
++
 +/// Messages are signed again this long after signing, shortly before they expire.
 +/// Must stay below the message lifetime set in `Miner::new`.
 +const MESSAGE_REUSE_MS: u64 = 105_000;
@@ -381,12 +542,10 @@ index 2874589..ebfac1a 100644
 +    );
 +    gloo_timers::future::TimeoutFuture::new(retry_ms as u32).await;
 +    true
-+}
-+
- fn send_callback(callback: &js_sys::Function, arg: CallbackData) {
-     let _ = callback.call1(&JsValue::NULL, &serde_json::to_string(&arg).unwrap().into());
  }
-@@ -348,6 +580,7 @@ async fn submit_session_root(
+ 
+ fn send_callback(callback: &js_sys::Function, arg: CallbackData) {
+@@ -348,6 +722,7 @@ async fn submit_session_root(
      worker: &MinerWorker,
      trees: (&ResultOfGetMerkleSnapshot, &ResultOfGetMerkleSnapshot),
      signer: Signer,
@@ -394,7 +553,7 @@ index 2874589..ebfac1a 100644
  ) -> Result<(), String> {
      let easy_params =
          SessionSubmit { root: trees.0.root.clone(), leaves_count: trees.0.leaves.len() as u64 };
-@@ -357,32 +590,34 @@ async fn submit_session_root(
+@@ -357,32 +732,34 @@ async fn submit_session_root(
      let submit_session_params_bytes = verifier::combine_bytes(&[&easy_params, &hard_params])
          .map_err(|e| format!("Serialize submit session params to bytes ({e})"))?;
  
@@ -449,7 +608,7 @@ index 2874589..ebfac1a 100644
      let easy_core = cores.0;
      let hard_core = cores.1;
      let hard_tree = trees.1;
-@@ -440,26 +675,37 @@ async fn submit_session_proof(
+@@ -440,26 +817,37 @@ async fn submit_session_proof(
      let event_data = String::try_from(DecodedSessionStatusData { worker_id: worker.id })
          .map_err(|e| format!("Serialize event data ({e})"))?;
  
