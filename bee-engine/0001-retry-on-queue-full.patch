@@ -1,5 +1,5 @@
 diff --git a/bee_miner/src/wasm/miner.rs b/bee_miner/src/wasm/miner.rs
-index 1e95951..f6a21ab 100644
+index 1e95951..cd27575 100644
 --- a/bee_miner/src/wasm/miner.rs
 +++ b/bee_miner/src/wasm/miner.rs
 @@ -41,6 +41,9 @@ pub struct Miner {
@@ -12,7 +12,18 @@ index 1e95951..f6a21ab 100644
  }
  
  impl Drop for Miner {
-@@ -106,6 +109,7 @@ impl Miner {
+@@ -64,6 +67,10 @@ impl Miner {
+             let mut config = ClientConfig::default();
+             config.network.endpoints = Some(endpoints);
+             config.network.query_timeout = 10000;
++            // NeoRider patch: messages live 120 s instead of the SDK default of 40 s.
++            // Under load the node queue often holds a message longer than 40 s – it then
++            // expires before execution and the session silently does not count.
++            config.abi.message_expiration_timeout = 120_000;
+ 
+             let context = ClientContext::new(config).map_err(|e| JsError::new(&e.to_string()))?;
+             Arc::new(context)
+@@ -106,6 +113,7 @@ impl Miner {
              complexity: Rc::new(Cell::new(complexity)),
              workers: Rc::new(RefCell::new(Vec::new())),
              dropped: Rc::new(Cell::new(false)),
@@ -20,7 +31,7 @@ index 1e95951..f6a21ab 100644
          };
  
          // Start internal thread, which will catch miner contract events
-@@ -118,7 +122,11 @@ impl Miner {
+@@ -118,7 +126,11 @@ impl Miner {
              let mut after_dt = events_after_dt;
  
              while !dropped_ref.get() {
@@ -33,7 +44,7 @@ index 1e95951..f6a21ab 100644
                  web_sys::console::debug_1(&"Read miner events thread".to_string().into());
  
                  let decoded_events = match get_miner_events(&contract_ref, after_dt).await {
-@@ -231,6 +239,7 @@ impl Miner {
+@@ -231,6 +243,7 @@ impl Miner {
              seeds_ref,
              workers_ref,
              callback,
@@ -41,7 +52,7 @@ index 1e95951..f6a21ab 100644
          ));
  
          Ok(())
-@@ -259,6 +268,22 @@ impl Miner {
+@@ -259,6 +272,22 @@ impl Miner {
          Ok(())
      }
  
