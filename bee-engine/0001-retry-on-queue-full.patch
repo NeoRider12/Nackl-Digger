@@ -115,7 +115,7 @@ index 12f44c6..64a635f 100644
          .map_err(|e| JsError::new(&format!("Query miner events ({e})")))?
          .iter()
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
-index 2874589..17cb15b 100644
+index 2874589..2b1c301 100644
 --- a/bee_miner/src/wasm/worker.rs
 +++ b/bee_miner/src/wasm/worker.rs
 @@ -1,14 +1,20 @@
@@ -366,7 +366,7 @@ index 2874589..17cb15b 100644
                          send_callback(
                              &callback,
                              CallbackData::data(
-@@ -274,7 +463,199 @@ pub(crate) async fn run(
+@@ -274,7 +463,219 @@ pub(crate) async fn run(
      }
  
      // Update worker status and remove from workers
@@ -396,6 +396,11 @@ index 2874589..17cb15b 100644
 +    let e = error.to_lowercase();
 +    // An expired message is signed again on the next attempt (see `send_reusable`).
 +    if e.contains("expired") {
++        return true;
++    }
++    // Overtaken by a newer message of the same key (replay protection, exit code 52) or
++    // expired on the node (57): signed again on the next attempt (see `send_reusable`).
++    if needs_new_signature(error) {
 +        return true;
 +    }
 +    // Executed and rejected by the contract: resending the same message cannot help.
@@ -431,6 +436,21 @@ index 2874589..17cb15b 100644
 +fn executed_and_failed(error: &str) -> bool {
 +    let e = error.to_lowercase();
 +    e.contains("compute phase") && !e.contains("queue is full")
++}
++
++/// NeoRider patch: exit code of a contract rejection (`"exit_code": Number(52)`).
++fn exit_code(error: &str) -> Option<i64> {
++    let key = "exit_code\": Number(";
++    let start = error.rfind(key)? + key.len();
++    let digits: String = error[start..].chars().take_while(|c| c.is_ascii_digit() || *c == '-').collect();
++    digits.parse().ok()
++}
++
++/// NeoRider patch: the contract's replay protection rejected the message because a newer
++/// message of the same key was executed first (52), or it expired on the node (57).
++/// The same signed message can never succeed then – sign it again.
++fn needs_new_signature(error: &str) -> bool {
++    executed_and_failed(error) && matches!(exit_code(error), Some(52) | Some(57))
 +}
 +
 +/// NeoRider patch: the miner contract already holds exactly this session's root.
@@ -525,7 +545,7 @@ index 2874589..17cb15b 100644
 +        Ok(_) => Ok(()),
 +        Err(e) => {
 +            let text = format!("{label} ({e})");
-+            if text.to_lowercase().contains("expired") {
++            if text.to_lowercase().contains("expired") || needs_new_signature(&text) {
 +                *prepared = None;
 +            }
 +            Err(text)
@@ -567,7 +587,7 @@ index 2874589..17cb15b 100644
  }
  
  fn send_callback(callback: &js_sys::Function, arg: CallbackData) {
-@@ -348,6 +729,7 @@ async fn submit_session_root(
+@@ -348,6 +749,7 @@ async fn submit_session_root(
      worker: &MinerWorker,
      trees: (&ResultOfGetMerkleSnapshot, &ResultOfGetMerkleSnapshot),
      signer: Signer,
@@ -575,7 +595,7 @@ index 2874589..17cb15b 100644
  ) -> Result<(), String> {
      let easy_params =
          SessionSubmit { root: trees.0.root.clone(), leaves_count: trees.0.leaves.len() as u64 };
-@@ -357,32 +739,34 @@ async fn submit_session_root(
+@@ -357,32 +759,34 @@ async fn submit_session_root(
      let submit_session_params_bytes = verifier::combine_bytes(&[&easy_params, &hard_params])
          .map_err(|e| format!("Serialize submit session params to bytes ({e})"))?;
  
@@ -630,7 +650,7 @@ index 2874589..17cb15b 100644
      let easy_core = cores.0;
      let hard_core = cores.1;
      let hard_tree = trees.1;
-@@ -440,26 +824,37 @@ async fn submit_session_proof(
+@@ -440,26 +844,37 @@ async fn submit_session_proof(
      let event_data = String::try_from(DecodedSessionStatusData { worker_id: worker.id })
          .map_err(|e| format!("Serialize event data ({e})"))?;
  
