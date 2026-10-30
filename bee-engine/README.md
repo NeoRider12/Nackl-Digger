@@ -20,7 +20,7 @@ This folder is the corresponding source of the modification.
 - **Already delivered:** a `DUPLICATE_MESSAGE` answer (an earlier attempt or the parallel copy to the other endpoint already got through) counts as submitted instead of failing the session.
 - **Message lifetime:** miner messages expire after 120 s instead of the SDK default of 40 s, so they survive long node queues.
 - **New functions:** `Miner.set_submit_deadline(ms)` and `Miner.set_submit_retry_ms(ms)` (interval, clamped to 1–10 s).
-- **Event polling:** the miner reads its contract events every 2.5 s only while a session is running, otherwise every 10 s (fewer requests, less rate limiting).
+- **Event polling:** the miner reads its contract events every 2.5 s only while a session is running, otherwise every 10 s, and only the last 25 instead of 100 events per poll (~9 KB instead of ~38 KB per answer; fewer requests, less mobile data, less rate limiting).
 - **Mining difficulty:** `hard_complexity` / `easy_complexity` are read from the miner contract and returned by `get_miner_data`.
 
 No other files are changed.

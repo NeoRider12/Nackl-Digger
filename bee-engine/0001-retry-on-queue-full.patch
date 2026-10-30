@@ -76,7 +76,7 @@ index 1e95951..cd27575 100644
      pub fn remove_seed(&self, seed: String) {
          self.seeds.borrow_mut().retain(|v| v != &seed);
 diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
-index 12f44c6..5fb6e77 100644
+index 12f44c6..64a635f 100644
 --- a/bee_miner/src/wasm/mod.rs
 +++ b/bee_miner/src/wasm/mod.rs
 @@ -1,4 +1,5 @@
@@ -99,6 +99,19 @@ index 12f44c6..5fb6e77 100644
  }
  
  #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+@@ -69,7 +77,11 @@ async fn get_miner_events(
+     contract: &mvsystem::miner::contract::Miner,
+     after_dt: u64,
+ ) -> Result<Vec<DecodedMinerEvent>, JsError> {
+-    query_events(contract.context().clone(), contract.address(), contract.dapp_id(), Some(100))
++    // NeoRider patch: last 25 instead of 100 events per poll – ~3 events per session are
++    // plenty for a 2.5 s poll; the answer shrinks from ~38 KB to ~9 KB (measured on
++    // mainnet), i.e. ~200 MB less mobile data per hour with 4 wallets. Missed intervals
++    // are covered by the chain fallback in the worker.
++    query_events(contract.context().clone(), contract.address(), contract.dapp_id(), Some(25))
+         .await
+         .map_err(|e| JsError::new(&format!("Query miner events ({e})")))?
+         .iter()
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
 index 2874589..15bc926 100644
 --- a/bee_miner/src/wasm/worker.rs
