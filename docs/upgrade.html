@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acki Upgrade Status</title>
+<style>
+  :root {
+    --bg: #12100c; --card: #1c1913; --line: #352e22; --fg: #f2ebdd; --muted: #a2967f;
+    --gold: #f5b631; --gold-dim: #f5b63133; --ok: #7fd18b; --warn: #f0a050; --bad: #ef6b5b;
+    --mono: ui-monospace, 'Roboto Mono', 'Cascadia Mono', monospace;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); }
+  main { max-width: 860px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-left)) 40px max(16px, env(safe-area-inset-right)); display: grid; gap: 18px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  h1 { margin: 0; font-size: 24px; color: var(--gold); text-wrap: balance; }
+  .meta { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; display: grid; gap: 12px; min-width: 0; }
+  .big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .big b { font: 700 56px/1 var(--mono); color: var(--gold); font-variant-numeric: tabular-nums; }
+  .big span { color: var(--muted); font-size: 18px; }
+  .bar { display: flex; height: 26px; border-radius: 13px; overflow: hidden; background: #2a251c; font: 600 12px/26px var(--mono); }
+  .bar div { white-space: nowrap; padding: 0 8px; min-width: 0; overflow: hidden; }
+  .seg-run { background: var(--ok); color: #10200f; }
+  .seg-ready { background: var(--gold); color: #1a1406; }
+  .seg-old { background: #5a5040; color: var(--fg); }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .legend div { display: grid; gap: 2px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .legend b { font: 700 18px var(--mono); }
+  h2 { margin: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .tile { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .tile small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .tile b { font: 700 18px var(--mono); }
+  .tile em { display: block; font-style: normal; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  canvas { width: 100%; height: 140px; display: block; }
+  button { justify-self: start; background: var(--gold); color: #1a1406; border: 0; border-radius: 999px; padding: 8px 16px; font-weight: 700; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .err { color: var(--bad); }
+  .note { color: var(--muted); font-size: 12px; }
+  code { font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Acki Nacki node upgrade</h1>
+    <span class="meta" id="meta">loading …</span>
+  </header>
+
+  <section class="card">
+    <div class="big"><b id="pct">–</b><span id="pctText">of block keepers support the new version</span></div>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card">
+    <h2>When block keepers can switch</h2>
+    <canvas id="chart" width="800" height="140" aria-label="Block keeper epoch ends over the next hours"></canvas>
+    <div class="tiles" id="tiles"></div>
+    <p class="note">Every block keeper has its <b>own</b> epoch of about 24 h, and the ends are spread over the whole day. A keeper can only switch to the new version at the end of <b>its</b> epoch. The chart shows how many block keeper epochs end in each hour from now.<br><b>Not the same as the mining epoch</b> (5.5 min) or the 24-h mining day with the daily tap limit – those run on their own clock.</p>
+  </section>
+
+  <button id="reload" type="button">Refresh</button>
+  <p class="note">Live data from <code>https://mainnet-cf.ackinacki.org/v2/bk_set_update</code>, refreshed every 60 s. Block time is estimated from two readings. Field <code>protocol_version_support</code>: <code>A</code> = runs A; <code>A-&gt;B</code> = runs A and supports B for the switch. Unofficial helper page by NeoRider.</p>
+</main>
+<script>
+const URLS = ['https://mainnet-cf.ackinacki.org/v2/bk_set_update', 'https://mainnet.ackinacki.org/v2/bk_set_update'];
+let lastSample = null; let blockSec = 0.335;
+const ver = (part) => (part || '').split('_')[1] || '?';
+
+async function load() {
+  let data = null, err = '';
+  for (const u of URLS) {
+    for (let i = 0; i < 3 && !data; i++) {
+      try { const r = await fetch(u, { cache: 'no-store' }); if (r.ok) data = await r.json(); else err = 'HTTP ' + r.status; }
+      catch (e) { err = e.message; }
+    }
+    if (data) break;
+  }
+  if (!data) { document.getElementById('meta').innerHTML = '<span class="err">Could not load (' + err + ') – try Refresh</span>'; return; }
+  const now = Date.now();
+  if (lastSample && data.seq_no > lastSample.seq) blockSec = Math.min(0.6, Math.max(0.2, (now - lastSample.t) / 1000 / (data.seq_no - lastSample.seq)));
+  lastSample = { seq: data.seq_no, t: now };
+  render(data);
+}
+
+function render(d) {
+  const bks = d.current || [];
+  const n = bks.length;
+  // Zielversion = häufigste angekündigte Version nach "->"
+  const targets = {}; let current = {};
+  for (const b of bks) {
+    const [run, next] = (b.protocol_version_support || '').split('->');
+    current[ver(run)] = (current[ver(run)] || 0) + 1;
+    if (next) targets[ver(next)] = (targets[ver(next)] || 0) + 1;
+  }
+  const target = Object.entries(targets).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const runningTarget = target ? (current[target] || 0) : 0;
+  const ready = target ? (targets[target] || 0) : 0;
+  const old = n - runningTarget - ready;
+  const supportPct = n ? Math.round(((runningTarget + ready) / n) * 100) : 0;
+  document.getElementById('pct').textContent = supportPct + '%';
+  document.getElementById('pctText').textContent = target
+    ? `of ${n} block keepers support ${target} (${runningTarget} already run it)`
+    : `of ${n} block keepers – no new version announced`;
+  const seg = (cls, v, label) => v ? `<div class="${cls}" style="width:${(v / n) * 100}%" title="${label}: ${v}">${v}</div>` : '';
+  document.getElementById('bar').innerHTML = seg('seg-run', runningTarget, 'running target') + seg('seg-ready', ready, 'ready (announced)') + seg('seg-old', old, 'old version only');
+  const versions = Object.entries(current).map(([v, c]) => `${v}: ${c}`).join(' · ');
+  document.getElementById('legend').innerHTML =
+    `<div><span><i style="background:var(--ok)"></i>Running ${target || 'new version'}</span><b>${runningTarget}</b></div>` +
+    `<div><span><i style="background:var(--gold)"></i>Ready – announced ${target || '–'}</span><b>${ready}</b></div>` +
+    `<div><span><i style="background:#5a5040"></i>Old version only</span><b>${old}</b></div>` +
+    `<div><span>Running now</span><b style="font-size:14px">${versions}</b></div>`;
+
+  const ends = bks.map(b => b.epoch_finish_seq_no).filter(Number.isFinite).map(e => (e - d.seq_no) * blockSec / 3600).sort((a, b) => a - b);
+  const future = ends.filter(h => h >= 0);
+  const fmt = (h) => { const t = new Date(Date.now() + h * 3600e3); return t.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }); };
+  const half = future[Math.floor(future.length / 2)];
+  const tiles = [
+    ['Next block keeper epoch end', future[0], future[0] != null ? 'in ' + future[0].toFixed(1) + ' h · ' + fmt(future[0]) : '–'],
+    ['Half of the keepers by', half, half != null ? 'in ' + half.toFixed(1) + ' h · ' + fmt(half) : '–'],
+    ['All keepers by', future[future.length - 1], future.length ? 'in ' + future[future.length - 1].toFixed(1) + ' h · ' + fmt(future[future.length - 1]) : '–'],
+    ['Overdue keepers', ends.length - future.length, 'epoch end passed, still active'],
+  ];
+  document.getElementById('tiles').innerHTML = tiles.map(([k, _v, t], i) => `<div class="tile"><small>${k}</small><b>${i === 3 ? (ends.length - future.length) : (t.split(' · ')[1] || '–')}</b><em>${i === 3 ? t : t.split(' · ')[0]}</em></div>`).join('');
+  drawChart(future);
+  const gen = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  document.getElementById('meta').textContent = `block #${d.seq_no.toLocaleString()} · ${n} keepers · ${gen}`;
+}
+
+function drawChart(hours) {
+  const c = document.getElementById('chart'); const ctx = c.getContext('2d');
+  const W = c.width = c.clientWidth * devicePixelRatio, H = c.height = 140 * devicePixelRatio;
+  ctx.clearRect(0, 0, W, H);
+  const maxH = Math.max(24, Math.ceil(hours[hours.length - 1] || 0));
+  const bins = new Array(maxH).fill(0); hours.forEach(h => bins[Math.min(maxH - 1, Math.floor(h))]++);
+  const top = Math.max(...bins, 1), pad = 22 * devicePixelRatio, bw = (W - pad) / maxH;
+  const css = getComputedStyle(document.documentElement);
+  ctx.fillStyle = css.getPropertyValue('--muted'); ctx.font = `${11 * devicePixelRatio}px ui-monospace, monospace`;
+  for (let i = 0; i < maxH; i++) {
+    const h = (bins[i] / top) * (H - pad - 6 * devicePixelRatio);
+    ctx.fillStyle = css.getPropertyValue('--gold'); ctx.fillRect(pad + i * bw + 1, H - pad - h, bw - 2, h);
+    if (i % 6 === 0) { ctx.fillStyle = css.getPropertyValue('--muted'); ctx.fillText('+' + i + 'h', pad + i * bw, H - 6 * devicePixelRatio); }
+  }
+  ctx.fillStyle = css.getPropertyValue('--muted'); ctx.fillText(String(top), 2, 12 * devicePixelRatio);
+}
+
+document.getElementById('reload').addEventListener('click', load);
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>

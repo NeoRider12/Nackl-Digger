@@ -58,6 +58,11 @@ The app ID was issued by the Acki Nacki team, and the app is shared with their p
   <img src="docs/screenshots/NacklDigger-Android-landscape.png" width="720" alt="Tablet in landscape">
 </p>
 
+## Network upgrade status
+
+Live page showing how many Acki Nacki block keepers support the next node version and when their epochs end:
+**[neorider12.github.io/Nackl-Digger/upgrade.html](https://neorider12.github.io/Nackl-Digger/upgrade.html)** (data straight from `mainnet-cf.ackinacki.org/v2/bk_set_update`, refreshed every 60 s).
+
 ## Install
 
 1. Download `NacklDigger-v1.0.x.apk` from **[Releases](https://github.com/NeoRider12/Nackl-Digger/releases/latest)** on your Android device.

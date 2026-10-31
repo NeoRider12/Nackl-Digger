@@ -78,7 +78,7 @@ index 1e95951..4ee5834 100644
      pub fn remove_seed(&self, seed: String) {
          self.seeds.borrow_mut().retain(|v| v != &seed);
 diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
-index 12f44c6..64a635f 100644
+index 12f44c6..aef1a51 100644
 --- a/bee_miner/src/wasm/mod.rs
 +++ b/bee_miner/src/wasm/mod.rs
 @@ -1,4 +1,5 @@
@@ -114,6 +114,46 @@ index 12f44c6..64a635f 100644
          .await
          .map_err(|e| JsError::new(&format!("Query miner events ({e})")))?
          .iter()
+@@ -79,3 +91,39 @@ async fn get_miner_events(
+         })
+         .collect::<Result<Vec<DecodedMinerEvent>, JsError>>()
+ }
++
++/// NeoRider patch: performance test. Computes leaves exactly like the miner does (same
++/// hash function, same leaf layout) for `duration_ms` and returns the measured hash rate.
++/// `{ hashes, leaves, ms, hashes_per_sec }` – leaves = how many met `complexity`.
++#[wasm_bindgen::prelude::wasm_bindgen(js_name = benchmark_hashes)]
++pub fn benchmark_hashes(complexity: u32, duration_ms: u32) -> wasm_bindgen::JsValue {
++    use bee_shared::miner::leaf::Leaf;
++    let threshold = u128::MAX >> complexity.min(127);
++    let start = js_sys::Date::now();
++    let until = start + duration_ms as f64;
++    let mut hashes: u64 = 0;
++    let mut leaves: u64 = 0;
++    let mut nonce: u64 = 0;
++    let seed = "0x53d1092eb640987f6596941ced66ab814af0c51b03f93fef48ca36c30d67e46b".to_string();
++    let mut now = start;
++    while now < until {
++        // 2000 hashes between clock reads – reading the clock is far slower than a hash
++        for _ in 0..2000 {
++            let leaf = Leaf { index: leaves as u128, nonce, seed: seed.clone(), x: 120, y: 40, timestamp: now as u64, complexity };
++            if leaf.compute().hash_num() < threshold {
++                leaves += 1;
++            }
++            nonce = nonce.wrapping_add(1);
++            hashes += 1;
++        }
++        now = js_sys::Date::now();
++    }
++    let ms = (now - start).max(1.0);
++    serde_wasm_bindgen::to_value(&serde_json::json!({
++        "hashes": hashes,
++        "leaves": leaves,
++        "ms": ms,
++        "hashes_per_sec": (hashes as f64) * 1000.0 / ms,
++    }))
++    .unwrap_or(wasm_bindgen::JsValue::NULL)
++}
 diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
 index 2874589..2b1c301 100644
 --- a/bee_miner/src/wasm/worker.rs
