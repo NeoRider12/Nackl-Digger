@@ -86,8 +86,15 @@ async function load() {
   }
   if (!data) { document.getElementById('meta').innerHTML = '<span class="err">Could not load (' + err + ') – try Refresh</span>'; return; }
   const now = Date.now();
-  if (lastSample && data.seq_no > lastSample.seq) blockSec = Math.min(0.6, Math.max(0.2, (now - lastSample.t) / 1000 / (data.seq_no - lastSample.seq)));
-  lastSample = { seq: data.seq_no, t: now };
+  // Blockzeit nur aus Messungen mit genug Abstand schätzen (≥ 50 s, ≥ 100 Blöcke) und
+  // sanft nachführen. Vorher sprangen die Zeiten bei schnellem Refresh wild: wenige
+  // Sekunden und zwischengespeicherte Antworten ergaben unsinnige Blockzeiten.
+  if (!lastSample || data.seq_no < lastSample.seq) lastSample = { seq: data.seq_no, t: now };
+  else if (now - lastSample.t >= 50000 && data.seq_no - lastSample.seq >= 100) {
+    const est = (now - lastSample.t) / 1000 / (data.seq_no - lastSample.seq);
+    if (est > 0.25 && est < 0.5) blockSec = blockSec * 0.7 + est * 0.3;
+    lastSample = { seq: data.seq_no, t: now };
+  }
   render(data);
 }
 
