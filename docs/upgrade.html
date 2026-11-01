@@ -23,7 +23,9 @@
   .big b { font: 700 56px/1 var(--mono); color: var(--gold); font-variant-numeric: tabular-nums; }
   .big span { color: var(--muted); font-size: 18px; }
   .bar { display: flex; height: 26px; border-radius: 13px; overflow: hidden; background: #2a251c; font: 600 12px/26px var(--mono); }
-  .bar div { white-space: nowrap; padding: 0 8px; min-width: 0; overflow: hidden; }
+  .bar div { white-space: nowrap; padding: 0 6px; min-width: 40px; flex: 1 1 0; text-align: center; overflow: hidden; }
+  .bar div:first-child { padding-left: 10px; }
+  .bar div:last-child { padding-right: 10px; }
   .seg-run { background: var(--ok); color: #10200f; }
   .seg-ready { background: var(--gold); color: #1a1406; }
   .seg-old { background: #5a5040; color: var(--fg); }
@@ -108,7 +110,8 @@ function render(d) {
   document.getElementById('pctText').textContent = target
     ? `of ${n} block keepers support ${target} (${runningTarget} already run it)`
     : `of ${n} block keepers – no new version announced`;
-  const seg = (cls, v, label) => v ? `<div class="${cls}" style="width:${(v / n) * 100}%" title="${label}: ${v}">${v}</div>` : '';
+  // Breite über flex-grow (anteilig), aber jedes Feld mind. 40 px, damit die Zahl lesbar bleibt
+  const seg = (cls, v, label) => v ? `<div class="${cls}" style="flex-grow:${v}" title="${label}: ${v}">${v}</div>` : '';
   document.getElementById('bar').innerHTML = seg('seg-run', runningTarget, 'running target') + seg('seg-ready', ready, 'ready (announced)') + seg('seg-old', old, 'old version only');
   const versions = Object.entries(current).map(([v, c]) => `${v}: ${c}`).join(' · ');
   document.getElementById('legend').innerHTML =
