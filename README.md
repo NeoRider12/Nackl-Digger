@@ -5,9 +5,11 @@
 <h1 align="center">NeoRiders Nackl Digger</h1>
 
 <p align="center">
-  Android app for mining <b>NACKL</b> with the Acki Nacki Bee Engine – up to <b>four wallets at once</b>, one tap pad each.<br>
-  <b>No auto-tapper.</b> Every tap is a real finger on the screen.
+  Android app for mining <b>NACKL</b> with the Acki Nacki Bee Engine – <b>2 to 8 wallets at once</b> on one phone or tablet.<br>
+  The app taps for you (<b>AUTO</b>), keeps digging with the screen off, and claims your rewards.
 </p>
+
+> 🚀 **Coming soon:** the new version with **AUTO mode, 2–8 wallets, background mode and performance test** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
 
 <p align="center">
   <a href="https://github.com/NeoRider12/Nackl-Digger/releases/latest"><b>⬇ Download the latest APK</b></a>
@@ -15,48 +17,77 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/NacklDigger-Android-portrait.png" height="460" alt="Tablet, four wallets">
-  <img src="docs/screenshots/NacklDigger-Android-phone.png" height="460" alt="Phone, two wallets">
-  <img src="docs/screenshots/NacklDigger-Android-wallet-sheet.png" height="460" alt="Wallet sheet with epochs and payouts">
+  <img src="docs/screenshots/NacklDigger-Android-landscape.png" width="860" alt="Tablet in landscape with eight wallets">
 </p>
-<p align="center"><em>Tablet with four wallets · phone with two · wallet sheet with epochs and payouts (demo values)</em></p>
+<p align="center"><em>Tablet with eight wallets in AUTO, today's NACKL next to each name (demo values)</em></p>
 
 ---
+
+## Top features
+
+- 🐝 **2, 4, 6 or 8 wallets on one device** – one tap row per wallet, each on its own CPU core
+- 🤖 **AUTO by default** – a tap every 1.714 s per wallet, evenly spread, every tap visible in the row. Prefer your own finger? Switch a wallet to **MANUAL**
+- ⚡ **Performance test** in ⚙ Settings – measures your device and tells you how many wallets it can run
+- 🌙 **Background mode (optional)** – reliable digging with the screen off: ☾ BG in the header, with a step-by-step setup (notifications, battery, manufacturer settings) and a notification with a Stop button
+- 📶 **Network-friendly with many wallets** – staggered starts and sessions, shared status reads, smart resubmission and endpoint failover
+- 💰 **Today's NACKL next to every wallet**, rewards claimed automatically, per-epoch overview of sessions and payouts
+- 🔒 **Your wallet key never leaves the AN Wallet** – no account, no ads, no tracking
+
+<p align="center">
+  <img src="docs/screenshots/NacklDigger-Android-phone.png" height="460" alt="Phone with four wallets">
+  <img src="docs/screenshots/NacklDigger-Android-performance-test.png" height="460" alt="Performance test in the settings">
+  <img src="docs/screenshots/NacklDigger-Android-background-mode.png" height="460" alt="Background mode setup">
+</p>
+<p align="center"><em>Phone with four wallets · performance test · background mode setup (demo values)</em></p>
 
 ## In 60 seconds
 
 1. **Install** the APK from [Releases](https://github.com/NeoRider12/Nackl-Digger/releases/latest).
-2. **Pair** your AN Wallet: tap a pad → *Wallet Connect* → confirm the connection and the mining key in the AN Wallet.
-3. **Switch the wallet ON and tap.** 70 taps over about 2 minutes count per epoch (~5.5 min).
-4. The app **submits** your session and shows `✓ confirmed` or `✗ …` under the pad. **NACKL arrives** in your wallet a few minutes later – the app even claims it for you.
+2. **Pair** your AN Wallet: tap a wallet → *Wallet Connect* → confirm the connection and the mining key in the AN Wallet.
+3. **Switch the wallet ON** – it starts in **AUTO** and the app taps every 1.7 s for you (70 taps over about 2 minutes count per epoch of ~5.5 min).
+4. Optional: tap **☾ BG** to keep digging with the screen off, and run ⚙ → **Performance test** before adding more wallets.
+5. The app **submits** each session and shows `✓ confirmed` or `✗ …`. **NACKL arrives** in your wallet a few minutes later – the app claims it for you.
 
-## Features
+## All features
 
 **Mining**
-- **2 or 4 tap pads**, one wallet each (4 on tablets), multi-touch
-- **Multi-core:** every wallet computes its proof on its own CPU core
-- **Epoch-aware:** shows taps, duration and time left in the epoch; waits for the next epoch instead of starting a session that could not finish in time
+- **2, 4, 6 or 8 wallets** on phones and tablets – as many as your device handles (see the performance test); tablet layouts 3 × 2 / 4 × 2, phones scroll
+- **AUTO or MANUAL per wallet** – AUTO is the default and has no knobs to get wrong; MANUAL lets you tap yourself
+- **Multi-core:** every wallet computes its proof on its own CPU core; the engine is compiled once for all wallets
+- **Performance test:** one core, then 2/4/6/8 cores at once, at the current difficulty – with a recommendation
+- **Epoch-aware:** shows taps, duration and time left; waits for the next epoch instead of starting a session that could not finish in time
+
+**Background mode (optional)**
+- Keeps taps, submissions and reward claims running with the screen off or another app in front
+- Setup sheet with checklist: notifications, *no battery restrictions*, and the exact menu path for Samsung, Xiaomi/Redmi, Huawei/Honor, Oppo/Realme/OnePlus, Vivo and Asus
+- Permanent notification with live status and a Stop button; runs only while a wallet is ON
 
 **When the network is busy**
 - **Smart resubmission:** root and proof are signed once and resent unchanged on *queue full*, timeouts and gateway errors – the node recognises repeats instead of queueing copies
+- **Staggered starts and sessions:** wallets don't hit the node in the same second
+- **Shared reads:** identical status requests of several wallets go out once
 - **Two endpoints with failover:** `mainnet` and `mainnet-cf`
-- **Self-healing:** reads the session state from the contract if the node's events don't arrive, clears a stuck session on chain before the next one, auto-restore after repeated failures
+- **Self-healing:** reads the session state from the contract if the node's events don't arrive, clears a stuck session on chain, auto-restore after repeated failures
 
 **Payouts**
-- **Automatic claiming:** a confirmed epoch is only paid out with the wallet's next successful session – if that does not come in time, the app sends `get_reward` itself, so rewards don't expire
+- **Automatic claiming:** if a confirmed epoch is not paid out with the next session in time, the app sends `get_reward` itself, so rewards don't expire
+- **NACKL today** next to every wallet name (current 24-h day)
 - **Per-epoch overview:** status, taps and NACKL received for every session; last payout with time on the main screen
+- **Wallet sheet:** today's total, locked and unlocked balance
+
+<p align="center">
+  <img src="docs/screenshots/NacklDigger-Android-portrait.png" height="520" alt="Tablet in portrait with eight wallets">
+  <img src="docs/screenshots/NacklDigger-Android-wallet-sheet.png" height="520" alt="Wallet sheet with epochs and payouts">
+</p>
+<p align="center"><em>Tablet in portrait with eight wallets · wallet sheet with epochs and payouts (demo values)</em></p>
 
 **Comfort & safety**
-- Header with CPU load, success rate, mining difficulty, network quality and device temperature
-- Heat protection, daily tap limit, optional off/on at the new 24-h epoch
-- **Encrypted backup** of settings and pairings (restore after reinstalling)
+- Header with CPU load, success rate, difficulty, network quality and device temperature
+- Heat protection, daily tap limit, optional off/on at the new 24-h epoch – can also be applied to the day already running
+- **Encrypted backup** of settings and all pairings (restore after reinstalling)
 - Optional screen dimming while digging, exportable log
 
 The app ID was issued by the Acki Nacki team, and the app is shared with their permission.
-
-<p align="center">
-  <img src="docs/screenshots/NacklDigger-Android-landscape.png" width="720" alt="Tablet in landscape">
-</p>
 
 ## Network upgrade status
 
@@ -74,6 +105,15 @@ Live page showing how many Acki Nacki block keepers support the next node versio
 **Before uninstalling:** ⚙ → *Backup* → *Save backup to Downloads*, so you can restore everything afterwards.
 
 ## FAQ
+
+**AUTO or MANUAL?**
+AUTO is the easy way: switch it on and let the app dig. It only taps while the wallet is ON and a session can still finish in the epoch, and it respects the daily limit. Run ⚙ → *Performance test* once to see how many wallets your device keeps up with.
+
+**How many wallets can my device run?**
+Open ⚙ → *Performance test* (about 15 s, best with all wallets off). It measures your device at the current difficulty and recommends 2, 4 or 8 wallets. With 8 wallets keep an eye on the temperature in the header during the first hour – heat protection switches wallets off if the device gets too hot.
+
+**Can I switch the screen off?**
+Yes, with ☾ **BG** (background mode) in the header. It shows a notification while it runs and asks once for notifications and *no battery restrictions*. On Xiaomi/Redmi, Samsung and some other brands also allow *Autostart* / *Never sleeping apps* – the setup sheet shows where to find it. Don't swipe the app away in the recent-apps list.
 
 **My sessions say "not confirmed" – is the app broken?**
 Most likely the network is overloaded: the nodes accept the submission but cannot process it in time. This hits every mining app equally. The *Net* badge in the header shows how many sessions currently get through. The app keeps retrying, clears leftovers and claims payouts automatically – just keep digging.
