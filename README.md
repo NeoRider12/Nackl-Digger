@@ -5,11 +5,11 @@
 <h1 align="center">NeoRiders Nackl Digger</h1>
 
 <p align="center">
-  Android app for mining <b>NACKL</b> with the Acki Nacki Bee Engine – <b>2 to 8 wallets at once</b> on one phone or tablet.<br>
+  Android app for mining <b>NACKL</b> with the Acki Nacki Bee Engine – <b>2 to 12 wallets at once</b> on one phone or tablet.<br>
   The app taps for you (<b>AUTO</b>), keeps digging with the screen off, and claims your rewards.
 </p>
 
-> 🚀 **Coming soon:** the new version with **AUTO mode, 2–8 wallets, background mode and performance test** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
+> 🚀 **Coming soon:** the new version with **AUTO mode, 2–12 wallets, background mode and performance test** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
 
 <p align="center">
   <a href="https://github.com/NeoRider12/Nackl-Digger/releases/latest"><b>⬇ Download the latest APK</b></a>
@@ -25,7 +25,7 @@
 
 ## Top features
 
-- 🐝 **2, 4, 6 or 8 wallets on one device** – one tap row per wallet, each on its own CPU core
+- 🐝 **2, 4, 6, 8, 10 or 12 wallets on one device** – one tap row per wallet, each on its own CPU core
 - 🤖 **AUTO by default** – a tap every 1.714 s per wallet, evenly spread, every tap visible in the row. Prefer your own finger? Switch a wallet to **MANUAL**
 - ⚡ **Performance test** in ⚙ Settings – measures your device and tells you how many wallets it can run
 - 🌙 **Background mode (optional)** – reliable digging with the screen off: ☾ BG in the header, with a step-by-step setup (notifications, battery, manufacturer settings) and a notification with a Stop button
@@ -51,10 +51,10 @@
 ## All features
 
 **Mining**
-- **2, 4, 6 or 8 wallets** on phones and tablets – as many as your device handles (see the performance test); tablet layouts 3 × 2 / 4 × 2, phones scroll
+- **2, 4, 6, 8, 10 or 12 wallets** on phones and tablets – as many as your device handles (see the performance test); tablet layouts 3 × 2 up to 4 × 3, phones scroll
 - **AUTO or MANUAL per wallet** – AUTO is the default and has no knobs to get wrong; MANUAL lets you tap yourself
 - **Multi-core:** every wallet computes its proof on its own CPU core; the engine is compiled once for all wallets
-- **Performance test:** one core, then 2/4/6/8 cores at once, at the current difficulty – with a recommendation
+- **Performance test:** one core, then 2/4/6/8/10/12 wallets at once, at the current difficulty – with a recommendation
 - **Epoch-aware:** shows taps, duration and time left; waits for the next epoch instead of starting a session that could not finish in time
 
 **Background mode (optional)**
@@ -110,7 +110,7 @@ Live page showing how many Acki Nacki block keepers support the next node versio
 AUTO is the easy way: switch it on and let the app dig. It only taps while the wallet is ON and a session can still finish in the epoch, and it respects the daily limit. Run ⚙ → *Performance test* once to see how many wallets your device keeps up with.
 
 **How many wallets can my device run?**
-Open ⚙ → *Performance test* (about 15 s, best with all wallets off). It measures your device at the current difficulty and recommends 2, 4 or 8 wallets. With 8 wallets keep an eye on the temperature in the header during the first hour – heat protection switches wallets off if the device gets too hot.
+Open ⚙ → *Performance test* (about 20 s, best with all wallets off). It measures your device at the current difficulty and recommends how many wallets it can run (up to 12). With 8 or more wallets keep an eye on the temperature in the header during the first hour – heat protection switches wallets off if the device gets too hot.
 
 **Can I switch the screen off?**
 Yes, with ☾ **BG** (background mode) in the header. It shows a notification while it runs and asks once for notifications and *no battery restrictions*. On Xiaomi/Redmi, Samsung and some other brands also allow *Autostart* / *Never sleeping apps* – the setup sheet shows where to find it. Don't swipe the app away in the recent-apps list.
