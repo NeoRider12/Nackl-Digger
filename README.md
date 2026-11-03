@@ -9,7 +9,7 @@
   The app taps for you (<b>AUTO</b>), keeps digging with the screen off, and claims your rewards.
 </p>
 
-> 🚀 **Coming soon:** the new version with **AUTO mode, 2–12 wallets, background mode, performance test and animated wallet effects** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
+> 🚀 **Coming soon:** the new version with **AUTO mode, 2–12 wallets, premining, background mode, performance test and animated wallet effects** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
 
 <p align="center">
   <a href="https://github.com/NeoRider12/Nackl-Digger/releases/latest"><b>⬇ Download the latest APK</b></a>
@@ -62,6 +62,8 @@
 - **Multi-core:** every wallet computes its proof on its own CPU core; the engine is compiled once for all wallets
 - **Performance test:** one core, then 2/4/6/8/10/12 wallets at once, at the current difficulty – with a recommendation
 - **Epoch-aware:** shows taps, duration and time left; waits for the next epoch instead of starting a session that could not finish in time
+- **Premining:** the next session is mined while the previous one is still being submitted and goes out as soon as that one is through – no epoch is lost to a slow network (Bee Engine patches by the author of goblingames)
+- **Patient submitting:** root and proof are resent unchanged for up to 10 min, also after the epoch has ended – the session still counts
 
 **Background mode (optional)**
 - Keeps taps, submissions and reward claims running with the screen off or another app in front
@@ -160,7 +162,7 @@ Questions, bug reports, ideas: open an [issue](https://github.com/NeoRider12/Nac
 
 ## Licenses
 
-- The app includes **Bee Engine 6.0.0** by GOSH TECHNOLOGY LTD., **modified**, licensed under the **GNU AGPL-3.0**. The modification (patch), the license text and build instructions are in [`bee-engine/`](bee-engine/).
+- The app includes **Bee Engine 6.0.0** by GOSH TECHNOLOGY LTD., **modified**, licensed under the **GNU AGPL-3.0**. The modifications (patches, three of them by the author of goblingames), the license text and build instructions are in [`bee-engine/`](bee-engine/).
 - App code and logo © NeoRider. All rights reserved unless stated otherwise.
 - Acki Nacki and NACKL are names of their respective owners. This is a community app, not an official Acki Nacki product.
 

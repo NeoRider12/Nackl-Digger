@@ -1,0 +1,95 @@
+NeoRider patch 0004 on top of NewGoblin 0001-0003 (gosh-sh/bee-engine v6.0.0, commit 015bc466613e7b7c41f272dc16ba0cacbf0e4d93).
+- Lighter miner event polling: every 2.5 s only while a worker is alive, otherwise 10 s; last 25 instead of 100 events.
+- get_miner_data also returns easy_complexity / hard_complexity (for the difficulty badge).
+- benchmark_hashes(complexity, ms): performance test with the miner's own leaf hash.
+License: AGPL-3.0-only (same as upstream).
+
+diff --git a/bee_miner/src/wasm/miner.rs b/bee_miner/src/wasm/miner.rs
+--- a/bee_miner/src/wasm/miner.rs
++++ b/bee_miner/src/wasm/miner.rs
+@@ -162,7 +162,11 @@
+             let mut seen_events = VecDeque::new();
+ 
+             while !dropped_ref.get() {
+-                gloo_timers::future::TimeoutFuture::new(2500).await;
++                // NeoRider patch 0004: poll every 2.5 s only while a worker is alive (it waits
++                // for SessionInterval events), otherwise every 10 s – many wallets on one
++                // connection otherwise run into 429 rate limits.
++                let busy = !workers_ref.borrow().is_empty();
++                gloo_timers::future::TimeoutFuture::new(if busy { 2500 } else { 10000 }).await;
+                 web_sys::console::debug_1(&"Read miner events thread".to_string().into());
+ 
+                 let decoded_events =
+diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
+--- a/bee_miner/src/wasm/mod.rs
++++ b/bee_miner/src/wasm/mod.rs
+@@ -1,4 +1,5 @@
+ use ackinacki_kit::contracts::deserialize::deserialize_u128;
++use ackinacki_kit::contracts::deserialize::deserialize_u32;
+ use ackinacki_kit::contracts::deserialize::deserialize_u64;
+ use ackinacki_kit::contracts::event::query_events;
+ use ackinacki_kit::contracts::mvsystem;
+@@ -43,6 +44,13 @@
+ 
+     #[serde(alias = "_tapSum5m", deserialize_with = "deserialize_u128")]
+     pub tap_sum_5m: u128,
++
++    // NeoRider patch 0004: current mining difficulty, for display in the app.
++    #[serde(alias = "_easyComplexity", deserialize_with = "deserialize_u32", default)]
++    pub easy_complexity: u32,
++
++    #[serde(alias = "_hardComplexity", deserialize_with = "deserialize_u32", default)]
++    pub hard_complexity: u32,
+ }
+ 
+ #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+@@ -79,7 +87,8 @@
+     seen: &mut std::collections::VecDeque<String>,
+ ) -> Result<Vec<DecodedMinerEvent>, JsError> {
+     let events =
+-        query_events(contract.context().clone(), contract.address(), contract.dapp_id(), Some(100))
++        // NeoRider patch 0004: last 25 instead of 100 events per poll (~9 KB instead of ~38 KB)
++        query_events(contract.context().clone(), contract.address(), contract.dapp_id(), Some(25))
+             .await
+             .map_err(|e| JsError::new(&format!("Query miner events ({e})")))?;
+     let fresh = events
+@@ -100,3 +109,39 @@
+     }
+     Ok(decoded)
+ }
++
++/// NeoRider patch 0004: performance test. Computes leaves exactly like the miner does (same
++/// hash function, same leaf layout) for `duration_ms` and returns the measured hash rate.
++/// `{ hashes, leaves, ms, hashes_per_sec }` – leaves = how many met `complexity`.
++#[wasm_bindgen::prelude::wasm_bindgen(js_name = benchmark_hashes)]
++pub fn benchmark_hashes(complexity: u32, duration_ms: u32) -> wasm_bindgen::JsValue {
++    use bee_shared::miner::leaf::Leaf;
++    let threshold = u128::MAX >> complexity.min(127);
++    let start = js_sys::Date::now();
++    let until = start + duration_ms as f64;
++    let mut hashes: u64 = 0;
++    let mut leaves: u64 = 0;
++    let mut nonce: u64 = 0;
++    let seed = "0x53d1092eb640987f6596941ced66ab814af0c51b03f93fef48ca36c30d67e46b".to_string();
++    let mut now = start;
++    while now < until {
++        // 2000 hashes between clock reads – reading the clock is far slower than a hash
++        for _ in 0..2000 {
++            let leaf = Leaf { index: leaves as u128, nonce, seed: seed.clone(), x: 120, y: 40, timestamp: now as u64, complexity };
++            if leaf.compute().hash_num() < threshold {
++                leaves += 1;
++            }
++            nonce = nonce.wrapping_add(1);
++            hashes += 1;
++        }
++        now = js_sys::Date::now();
++    }
++    let ms = (now - start).max(1.0);
++    serde_wasm_bindgen::to_value(&serde_json::json!({
++        "hashes": hashes,
++        "leaves": leaves,
++        "ms": ms,
++        "hashes_per_sec": (hashes as f64) * 1000.0 / ms,
++    }))
++    .unwrap_or(wasm_bindgen::JsValue::NULL)
++}
