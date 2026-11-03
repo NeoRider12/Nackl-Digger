@@ -9,7 +9,7 @@
   The app taps for you (<b>AUTO</b>), keeps digging with the screen off, and claims your rewards.
 </p>
 
-> 🚀 **Coming soon:** the new version with **AUTO mode, 2–12 wallets, background mode and performance test** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
+> 🚀 **Coming soon:** the new version with **AUTO mode, 2–12 wallets, background mode, performance test and animated wallet effects** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
 
 <p align="center">
   <a href="https://github.com/NeoRider12/Nackl-Digger/releases/latest"><b>⬇ Download the latest APK</b></a>
@@ -31,6 +31,7 @@
 - 🌙 **Background mode (optional)** – reliable digging with the screen off: ☾ BG in the header, with a step-by-step setup (notifications, battery, manufacturer settings) and a notification with a Stop button
 - 📶 **Network-friendly with many wallets** – staggered starts and sessions, shared status reads, smart resubmission and endpoint failover
 - 💰 **Today's NACKL next to every wallet**, rewards claimed automatically, per-epoch overview of sessions and payouts
+- ⛏️ **See every result at a glance** – a gold-laden pickaxe for a confirmed session, a pickaxe bursting apart in slow motion for a failed one, a spinning $NACKL coin for every payout – right in the wallet's box, no pop-up messages covering the other wallets
 - 🔒 **Your wallet key never leaves the AN Wallet** – no account, no ads, no tracking
 
 <p align="center">
@@ -39,6 +40,11 @@
   <img src="docs/screenshots/NacklDigger-Android-background-mode.png" height="460" alt="Background mode setup">
 </p>
 <p align="center"><em>Phone with four wallets · performance test · background mode setup (demo values)</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/NacklDigger-Android-effects.webp" width="860" alt="Wallet effects: confirmed session, failed session and payout">
+</p>
+<p align="center"><em>Results right in the wallet box: confirmed · failed · payout (demo values)</em></p>
 
 ## In 60 seconds
 
@@ -74,6 +80,13 @@
 - **NACKL today** next to every wallet name (current 24-h day)
 - **Per-epoch overview:** status, taps and NACKL received for every session; last payout with time on the main screen
 - **Wallet sheet:** today's total, locked and unlocked balance
+
+**Wallet effects**
+- **Confirmed session:** a pickaxe with gold nuggets pulses in the wallet box, with the confirmed taps below it (`70 ✓`)
+- **Failed session:** the broken pickaxe bursts apart in slow motion, with the reason below it (`✗ not confirmed`)
+- **Payout:** an embossed $NACKL coin spins in the middle of the box, with the amount below it (`+0.56 NACKL`)
+- Each effect runs 6 seconds; several effects of one wallet play one after another. Buttons underneath stay usable
+- Pop-up messages only for things that need you, like a wallet that has to be paired again
 
 <p align="center">
   <img src="docs/screenshots/NacklDigger-Android-portrait.png" height="520" alt="Tablet in portrait with eight wallets">
