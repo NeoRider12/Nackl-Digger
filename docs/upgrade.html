@@ -45,6 +45,15 @@
   .err { color: var(--bad); }
   .note { color: var(--muted); font-size: 12px; }
   code { font-family: var(--mono); font-size: 12px; }
+  .why p { margin: 0; }
+  .why ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  .verdict { font-size: 17px; font-weight: 600; }
+  .verdict.wait { color: var(--warn); } .verdict.go { color: var(--ok); }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font: 13px var(--mono); font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; }
+  a { color: var(--gold); }
 </style>
 </head>
 <body>
@@ -60,11 +69,24 @@
     <div class="legend" id="legend"></div>
   </section>
 
+  <section class="card why">
+    <h2>Why hasn't it switched yet?</h2>
+    <p class="verdict" id="verdict">–</p>
+    <div class="tbl" id="holdouts"></div>
+    <p><b>The rule:</b> the network switches only when <b>every</b> block keeper in the set announces exactly the same step (for example <code>1.0.7-&gt;1.0.8</code>). There is no percentage threshold – 98 % is not enough, a single keeper that still announces only the old version holds everyone back. This is in the node code: the version state moves on only if <code>descendant_bk_set … protocol_support … all_elements_same()</code> (<a href="https://github.com/ackinacki/ackinacki/blob/main/node/src/node/services/block_processor/service.rs" target="_blank" rel="noopener">block_processor/service.rs</a>, <a href="https://github.com/ackinacki/ackinacki/blob/main/node/src/versioning/block_protocol_version_state.rs" target="_blank" rel="noopener">block_protocol_version_state.rs</a>).</p>
+    <ol>
+      <li><b>Announce:</b> an operator installs the new node. Its keeper announces the new version only when <b>its own</b> epoch ends and continues (the value comes from the keeper's epoch contract).</li>
+      <li><b>All the same:</b> as soon as all keepers announce the same step, the next block locks the transition.</li>
+      <li><b>Switch:</b> once that block is finalized, the whole network runs the new version – a matter of minutes, not hours.</li>
+    </ol>
+    <p class="note">So the remaining keepers decide when it happens. If their operators have already installed the new node, the switch comes right after the last of their epochs ends. If not, it waits until they update – or until they leave the set. A new keeper that joins with the old version would hold it back again.</p>
+  </section>
+
   <section class="card">
     <h2>When block keepers can switch</h2>
     <canvas id="chart" width="800" height="140" aria-label="Block keeper epoch ends over the next hours"></canvas>
     <div class="tiles" id="tiles"></div>
-    <p class="note">Every block keeper has its <b>own</b> epoch of about 24 h, and the ends are spread over the whole day. A keeper can only switch to the new version at the end of <b>its</b> epoch. The chart shows how many block keeper epochs end in each hour from now.<br><b>Not the same as the mining epoch</b> (5.5 min) or the 24-h mining day with the daily tap limit – those run on their own clock.</p>
+    <p class="note">Every block keeper has its <b>own</b> epoch of about 24 h, and the ends are spread over the whole day. A keeper can only announce a new version at the end of <b>its</b> epoch. The chart shows how many block keeper epochs end in each hour from now.<br><b>Not the same as the mining epoch</b> (5.5 min) or the 24-h mining day with the daily tap limit – those run on their own clock.</p>
   </section>
 
   <button id="reload" type="button">Refresh</button>
@@ -126,6 +148,26 @@ function render(d) {
     `<div><span><i style="background:var(--gold)"></i>Ready – announced ${target || '–'}</span><b>${ready}</b></div>` +
     `<div><span><i style="background:#5a5040"></i>Old version only</span><b>${old}</b></div>` +
     `<div><span>Running now</span><b style="font-size:14px">${versions}</b></div>`;
+
+  // Wer hält auf? Alle, deren Angabe vom häufigsten "A->B" abweicht
+  const sup = {};
+  for (const b of bks) { const v = b.protocol_version_support || 'None'; sup[v] = (sup[v] || 0) + 1; }
+  const step = Object.entries(sup).filter(([v]) => v.includes('->')).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const totalStake = bks.reduce((a, b) => a + Number(b.stake || 0), 0) || 1;
+  const hold = step ? bks.filter(b => (b.protocol_version_support || 'None') !== step) : [];
+  const vEl = document.getElementById('verdict'); const hEl = document.getElementById('holdouts');
+  const when = (seq) => { const h = (seq - d.seq_no) * blockSec / 3600; const t = new Date(Date.now() + h * 3600e3); return { h, txt: t.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) }; };
+  const label = (v) => v.includes('->') ? v.split('->').map(ver).join(' → ') : ver(v);
+  if (!step) { vEl.className = 'verdict'; vEl.textContent = 'No new version is announced at the moment.'; hEl.innerHTML = ''; }
+  else if (!hold.length) { vEl.className = 'verdict go'; vEl.textContent = `All ${n} block keepers announce ${label(step)} – the switch should happen within minutes.`; hEl.innerHTML = ''; }
+  else {
+    const last = when(Math.max(...hold.map(b => b.epoch_finish_seq_no)));
+    const share = (hold.reduce((a, b) => a + Number(b.stake || 0), 0) / totalStake * 100).toFixed(1);
+    vEl.className = 'verdict wait';
+    vEl.textContent = `${hold.length} of ${n} block keepers (${share} % of the stake) do not announce ${label(step)} yet. Earliest switch: ${last.h >= 0 ? last.txt + ' (in ' + last.h.toFixed(1) + ' h)' : 'now'} – only if they have updated by then.`;
+    hEl.innerHTML = '<table><thead><tr><th>Keeper</th><th>Announces</th><th>Stake</th><th>Epoch ends</th></tr></thead><tbody>' +
+      hold.sort((a, b) => a.epoch_finish_seq_no - b.epoch_finish_seq_no).map(b => { const w = when(b.epoch_finish_seq_no); return `<tr><td title="${b.address}">${(b.address || '').slice(0, 10)}…</td><td>${label(b.protocol_version_support || 'None')}</td><td>${(Number(b.stake) / totalStake * 100).toFixed(2)} %</td><td>${w.h >= 0 ? w.txt + ' · in ' + w.h.toFixed(1) + ' h' : 'passed'}</td></tr>`; }).join('') + '</tbody></table>';
+  }
 
   const ends = bks.map(b => b.epoch_finish_seq_no).filter(Number.isFinite).map(e => (e - d.seq_no) * blockSec / 3600).sort((a, b) => a - b);
   const future = ends.filter(h => h >= 0);
