@@ -159,7 +159,11 @@ function render(d) {
   const when = (seq) => { const h = (seq - d.seq_no) * blockSec / 3600; const t = new Date(Date.now() + h * 3600e3); return { h, txt: t.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) }; };
   const label = (v) => v.includes('->') ? v.split('->').map(ver).join(' → ') : ver(v);
   if (!step) { vEl.className = 'verdict'; vEl.textContent = 'No new version is announced at the moment.'; hEl.innerHTML = ''; }
-  else if (!hold.length) { vEl.className = 'verdict go'; vEl.textContent = `All ${n} block keepers announce ${label(step)} – the switch should happen within minutes.`; hEl.innerHTML = ''; }
+  else if (!hold.length) {
+    vEl.className = 'verdict go';
+    vEl.textContent = `All ${n} block keepers announce ${label(step)} – by the node code the network locks the switch with the next block and completes it once that block is final.`;
+    hEl.innerHTML = '<p class="note">This list cannot confirm the switch itself: a keeper\'s entry here comes from its epoch contract and only shows the new version after its own epoch renews – that takes up to a day, even if the network already runs the new version. The public API does not show which protocol version the blocks use.</p>';
+  }
   else {
     const last = when(Math.max(...hold.map(b => b.epoch_finish_seq_no)));
     const share = (hold.reduce((a, b) => a + Number(b.stake || 0), 0) / totalStake * 100).toFixed(1);
