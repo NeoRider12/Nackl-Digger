@@ -49,6 +49,8 @@
   .why ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
   .verdict { font-size: 17px; font-weight: 600; }
   .verdict.wait { color: var(--warn); } .verdict.go { color: var(--ok); }
+  h3 { font-size: 14px; margin: 18px 0 6px; }
+  .phases li { margin: 4px 0; }
   .tbl { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font: 13px var(--mono); font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -70,7 +72,7 @@
   </section>
 
   <section class="card why">
-    <h2>Why hasn't it switched yet?</h2>
+    <h2 id="whyH">Why hasn't it switched yet?</h2>
     <p class="verdict" id="verdict">–</p>
     <div class="tbl" id="holdouts"></div>
     <p><b>The rule:</b> the network switches only when <b>every</b> block keeper in the set announces exactly the same step (for example <code>1.0.7-&gt;1.0.8</code>). There is no percentage threshold – 98 % is not enough, a single keeper that still announces only the old version holds everyone back. This is in the node code: the version state moves on only if <code>descendant_bk_set … protocol_support … all_elements_same()</code> (<a href="https://github.com/ackinacki/ackinacki/blob/main/node/src/node/services/block_processor/service.rs" target="_blank" rel="noopener">block_processor/service.rs</a>, <a href="https://github.com/ackinacki/ackinacki/blob/main/node/src/versioning/block_protocol_version_state.rs" target="_blank" rel="noopener">block_protocol_version_state.rs</a>).</p>
@@ -79,6 +81,14 @@
       <li><b>All the same:</b> as soon as all keepers announce the same step, the next block locks the transition.</li>
       <li><b>Switch:</b> once that block is finalized, the whole network runs the new version – a matter of minutes, not hours.</li>
     </ol>
+    <h3>How to read this page – works for every upgrade</h3>
+    <ol class="phases">
+      <li><b>Announcing</b> – some keepers show <code>A-&gt;B</code>, the rest only <code>A</code>. The percentage grows as keeper epochs end. The table lists who still holds it back.</li>
+      <li><b>All announce (100 %)</b> – every keeper shows <code>A-&gt;B</code>. By the node code the switch is locked with the next block and done within minutes. This list can't show that yet (see below).</li>
+      <li><b>Switch done</b> – the first keepers show plain <code>B</code>. A keeper only reports <code>B</code> without an arrow when the network already runs <code>B</code>, so one such entry proves the switch. The others keep the old <code>A-&gt;B</code> entry until their own epoch renews (up to a day).</li>
+      <li><b>Complete</b> – all keepers show <code>B</code>. The next upgrade then appears here by itself as <code>B-&gt;C</code>; the page needs no update for it.</li>
+    </ol>
+    <p class="note"><b>Why the list lags:</b> a keeper's entry comes from its epoch contract and is only rewritten when its ~24-h epoch ends. The public API has no field for the protocol version of the blocks, so the switch itself is only visible through the first renewed keepers.</p>
     <p class="note">So the remaining keepers decide when it happens. If their operators have already installed the new node, the switch comes right after the last of their epochs ends. If not, it waits until they update – or until they leave the set. A new keeper that joins with the old version would hold it back again.</p>
   </section>
 
@@ -158,10 +168,29 @@ function render(d) {
   const vEl = document.getElementById('verdict'); const hEl = document.getElementById('holdouts');
   const when = (seq) => { const h = (seq - d.seq_no) * blockSec / 3600; const t = new Date(Date.now() + h * 3600e3); return { h, txt: t.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) }; };
   const label = (v) => v.includes('->') ? v.split('->').map(ver).join(' → ') : ver(v);
-  if (!step) { vEl.className = 'verdict'; vEl.textContent = 'No new version is announced at the moment.'; hEl.innerHTML = ''; }
+  const hH = document.getElementById('whyH');
+  hH.textContent = "Why hasn't it switched yet?";
+  // Phase 3: Erste Keeper melden die Zielversion ohne Pfeil → Netz läuft bereits darauf
+  if (target && runningTarget > 0) {
+    hH.textContent = 'Switch done';
+    vEl.className = 'verdict go';
+    vEl.textContent = `Switch done – the network runs ${target}. ${runningTarget} of ${n} keepers already report plain ${target}; the other ${n - runningTarget} still show their old announcement until their own epoch renews (normal, takes up to a day).`;
+    hEl.innerHTML = '';
+    document.getElementById('pct').textContent = '✓ ' + target;
+    document.getElementById('pctText').textContent = `switch done · ${runningTarget} of ${n} keeper entries renewed so far`;
+  }
+  // Phase 4 / Ruhe: keine Ankündigung, alle melden dieselbe Version
+  else if (!step) {
+    const vs = Object.keys(current);
+    vEl.className = vs.length === 1 ? 'verdict go' : 'verdict';
+    vEl.textContent = vs.length === 1 ? `The network runs ${vs[0]} – all ${n} keepers report it. No new version is announced at the moment; a future upgrade shows up here by itself.` : 'No new version is announced at the moment.';
+    if (vs.length === 1) { hH.textContent = 'Up to date'; document.getElementById('pct').textContent = vs[0]; document.getElementById('pctText').textContent = `all ${n} block keepers · no upgrade announced`; }
+    hEl.innerHTML = '';
+  }
   else if (!hold.length) {
     vEl.className = 'verdict go';
-    vEl.textContent = `All ${n} block keepers announce ${label(step)} – by the node code the network locks the switch with the next block and completes it once that block is final.`;
+    hH.textContent = 'All keepers announce it – switch is due';
+    vEl.textContent = `All ${n} block keepers announce ${label(step)} – by the node code the network locks the switch with the next block and completes it once that block is final. Confirmed here as soon as the first keeper renews its epoch and reports plain ${ver(step.split('->')[1])}.`;
     hEl.innerHTML = '<p class="note">This list cannot confirm the switch itself: a keeper\'s entry here comes from its epoch contract and only shows the new version after its own epoch renews – that takes up to a day, even if the network already runs the new version. The public API does not show which protocol version the blocks use.</p>';
   }
   else {
