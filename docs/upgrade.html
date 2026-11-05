@@ -78,17 +78,17 @@
     <p><b>The rule:</b> the network switches only when <b>every</b> block keeper in the set announces exactly the same step (for example <code>1.0.7-&gt;1.0.8</code>). There is no percentage threshold – 98 % is not enough, a single keeper that still announces only the old version holds everyone back. This is in the node code: the version state moves on only if <code>descendant_bk_set … protocol_support … all_elements_same()</code> (<a href="https://github.com/ackinacki/ackinacki/blob/main/node/src/node/services/block_processor/service.rs" target="_blank" rel="noopener">block_processor/service.rs</a>, <a href="https://github.com/ackinacki/ackinacki/blob/main/node/src/versioning/block_protocol_version_state.rs" target="_blank" rel="noopener">block_protocol_version_state.rs</a>).</p>
     <ol>
       <li><b>Announce:</b> an operator installs the new node. Its keeper announces the new version only when <b>its own</b> epoch ends and continues (the value comes from the keeper's epoch contract).</li>
-      <li><b>All the same:</b> as soon as all keepers announce the same step, the next block locks the transition.</li>
-      <li><b>Switch:</b> once that block is finalized, the whole network runs the new version – a matter of minutes, not hours.</li>
+      <li><b>All the same:</b> as soon as all keepers announce the same step, the node code can lock the transition at a block.</li>
+      <li><b>Switch:</b> once that block is finalized, the whole network runs the new version. Observed in Nov 2026: 100 % alone did not trigger it within a day – something else has to happen too.</li>
     </ol>
     <h3>How to read this page – works for every upgrade</h3>
     <ol class="phases">
       <li><b>Announcing</b> – some keepers show <code>A-&gt;B</code>, the rest only <code>A</code>. The percentage grows as keeper epochs end. The table lists who still holds it back.</li>
-      <li><b>All announce (100 %)</b> – every keeper shows <code>A-&gt;B</code>. By the node code the switch is locked with the next block and done within minutes. This list can't show that yet (see below).</li>
+      <li><b>All announce (100 %)</b> – every keeper shows <code>A-&gt;B</code>. In the public node code this is the condition for the switch.</li>
       <li><b>Switch done</b> – the first keepers show plain <code>B</code>. A keeper only reports <code>B</code> without an arrow when the network already runs <code>B</code>, so one such entry proves the switch. The others keep the old <code>A-&gt;B</code> entry until their own epoch renews (up to a day).</li>
       <li><b>Complete</b> – all keepers show <code>B</code>. The next upgrade then appears here by itself as <code>B-&gt;C</code>; the page needs no update for it.</li>
     </ol>
-    <p class="note"><b>Why the list lags:</b> a keeper's entry comes from its epoch contract and is only rewritten when its ~24-h epoch ends. The public API has no field for the protocol version of the blocks, so the switch itself is only visible through the first renewed keepers.</p>
+    <p class="note"><b>Why the list can't show the switch:</b> a keeper's entry comes from its epoch contract and is only rewritten when its ~24-h epoch ends – and what it writes there is what its node <i>software</i> supports. A node build that supports both versions may keep writing <code>A-&gt;B</code> even after the network runs <code>B</code>. The public API has no field for the protocol version of the blocks. Example 1.0.7 → 1.0.8 (Nov 2026): the list stayed at 100 % <code>1.0.7-&gt;1.0.8</code> for days while most keepers renewed their epochs – yet since 3 Nov around 10:55 CET the mining verifier already counts the mining time from the hard leaves (⌊n × 4.7⌋), the rule from the 1.0.8 changelog.</p>
     <p class="note">So the remaining keepers decide when it happens. If their operators have already installed the new node, the switch comes right after the last of their epochs ends. If not, it waits until they update – or until they leave the set. A new keeper that joins with the old version would hold it back again.</p>
   </section>
 
@@ -189,8 +189,8 @@ function render(d) {
   }
   else if (!hold.length) {
     vEl.className = 'verdict go';
-    hH.textContent = 'All keepers announce it – switch is due';
-    vEl.textContent = `All ${n} block keepers announce ${label(step)} – by the node code the network locks the switch with the next block and completes it once that block is final. Confirmed here as soon as the first keeper renews its epoch and reports plain ${ver(step.split('->')[1])}.`;
+    hH.textContent = 'All keepers announce it – switch pending';
+    vEl.textContent = `All ${n} block keepers announce ${label(step)} – the condition from the public node code is met. Whether the network already runs ${ver(step.split('->')[1])} can't be read from this list (see “Why the list can't show the switch” below). The page shows “Switch done” as soon as a keeper reports plain ${ver(step.split('->')[1])}.`;
     hEl.innerHTML = '<p class="note">This list cannot confirm the switch itself: a keeper\'s entry here comes from its epoch contract and only shows the new version after its own epoch renews – that takes up to a day, even if the network already runs the new version. The public API does not show which protocol version the blocks use.</p>';
   }
   else {

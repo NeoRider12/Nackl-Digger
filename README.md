@@ -137,6 +137,9 @@ Open ⚙ → *Performance test* (about 20 s, best with all wallets off). It meas
 **Can I switch the screen off?**
 Yes, with ☾ **BG** (background mode) in the header. It shows a notification while it runs and asks once for notifications and *no battery restrictions*. On Xiaomi/Redmi, Samsung and some other brands also allow *Autostart* / *Never sleeping apps* – the setup sheet shows where to find it. Don't swipe the app away in the recent-apps list.
 
+**The app keeps getting closed in the background – what can I do?**
+First run ⚙ → *Background mode* setup (notifications, *no battery restrictions*, the manufacturer settings shown there). If Android still ends the app, it is usually **memory**: every wallet runs its own engine and needs its own share of RAM, so 8–12 wallets on a phone with 3–4 GB can be too much while other apps are open. **Start fewer wallets** (e.g. 4 instead of 8) and close apps you don't need. The app writes free memory to the log every few minutes (*Memory: … MB free*) and shows after a restart why Android ended it.
+
 **My sessions say "not confirmed" – is the app broken?**
 Most likely the network is overloaded: the nodes accept the submission but cannot process it in time. This hits every mining app equally. The *Net* badge in the header shows how many sessions currently get through. The app keeps retrying, clears leftovers and claims payouts automatically – just keep digging.
 
