@@ -103,7 +103,7 @@
 
 **Comfort & safety**
 - Header with CPU load, success rate (wallets that are ON), difficulty, network quality and device temperature. *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through
-- Heat protection, daily tap limit, optional off/on at the new 24-h epoch – can also be applied to the day already running
+- Heat protection: switches the wallets off when the device gets too hot and **back on by itself once it has cooled down** (background mode stays active meanwhile); daily tap limit; optional off/on at the new 24-h epoch – can also be applied to the day already running
 - **Encrypted backup** of settings and all pairings (restore after reinstalling)
 - Optional screen dimming while digging, down to **Extreme (−100 %)**: fully black with the lowest backlight, a tap lights it up for 30 s / 1 / 5 / 15 min (ring timer in ⚙)
 - Exportable log
