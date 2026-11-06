@@ -9,8 +9,6 @@
   The app taps for you (<b>AUTO</b>), keeps digging with the screen off, and claims your rewards.
 </p>
 
-> 🚀 **Coming soon:** the new version with **AUTO mode, 2–12 wallets, premining, background mode, performance test and animated wallet effects** is ready and will be released **right after the Acki Nacki node update to 1.0.8**. This page already shows it – the current download is still the manual version.
-
 <p align="center">
   <a href="https://github.com/NeoRider12/Nackl-Digger/releases/latest"><b>⬇ Download the latest APK</b></a>
   &nbsp;·&nbsp; Android 7+ &nbsp;·&nbsp; free
@@ -72,13 +70,14 @@
 **Background mode (optional)**
 - Keeps taps, submissions and reward claims running with the screen off or another app in front
 - Setup sheet with checklist: notifications, *no battery restrictions*, and the exact menu path for Samsung, Xiaomi/Redmi, Huawei/Honor, Oppo/Realme/OnePlus, Vivo and Asus
-- Permanent notification with live status and a Stop button; runs only while a wallet is ON
+- Permanent notification with live status, **Total NACKL today · yesterday** of all wallets and a Stop button; runs only while a wallet is ON
 
 **When the network is busy**
 - **Smart resubmission:** root and proof are signed once and resent unchanged on *queue full*, timeouts and gateway errors – the node recognises repeats instead of queueing copies
 - **Knocks until it's in:** every submission goes to both endpoints and the active block producer at once and keeps knocking for up to 55 s; a slow answer is not cut off (it is often the one being accepted) – a new attempt simply runs alongside
 - **Never stuck:** if the engine of a wallet stops answering, the session is closed and the engine rebuilt – the wallet keeps digging
-- **Staggered starts and sessions:** wallets don't hit the node in the same second
+- **Shared brake per device:** when *429 Too Many Requests* piles up (several devices on one connection count together), all wallets knock slower and fewer submissions run at once – back to full speed when it calms down
+- **Staggered starts and sessions:** wallets don't hit the node in the same second; premined sessions go out 12–27 s after the new epoch, with a fixed offset per wallet
 - **Shared reads:** identical status requests of several wallets go out once
 - **Two endpoints with failover:** `mainnet` and `mainnet-cf`
 - **Self-healing:** reads the session state from the contract if the node's events don't arrive, clears a stuck session on chain, auto-restore after repeated failures
@@ -129,7 +128,7 @@ Live page showing how many Acki Nacki block keepers support the next node versio
 ## FAQ
 
 **AUTO or tapping yourself?**
-AUTO is the easy way: press the power button and let the app dig. To tap yourself, switch the small AUTO button off. It only taps while the wallet is ON and a session can still finish in the epoch, and it respects the daily limit. Run ⚙ → *Performance test* once to see how many wallets your device keeps up with.
+AUTO is the easy way: press the power button and let the app dig. To tap yourself, switch the small AUTO button off. It only taps while the wallet is ON and a session can still finish in the epoch, and it stops at the network's daily limit of 12,000 taps per wallet. Run ⚙ → *Performance test* once to see how many wallets your device keeps up with.
 
 **How many wallets can my device run?**
 Open ⚙ → *Performance test* (about 20 s, best with all wallets off). It measures your device at the current difficulty and recommends how many wallets it can run (up to 12). With 8 or more wallets keep an eye on the temperature in the header during the first hour – heat protection switches wallets off if the device gets too hot.
@@ -141,7 +140,7 @@ Yes, with ☾ **BG** (background mode) in the header. It shows a notification wh
 First run ⚙ → *Background mode* setup (notifications, *no battery restrictions*, the manufacturer settings shown there). If Android still ends the app, it is usually **memory**: every wallet runs its own engine and needs its own share of RAM, so 8–12 wallets on a phone with 3–4 GB can be too much while other apps are open. **Start fewer wallets** (e.g. 4 instead of 8) and close apps you don't need. The app writes free memory to the log every few minutes (*Memory: … MB free*) and shows after a restart why Android ended it.
 
 **My sessions say "not confirmed" – is the app broken?**
-Most likely the network is overloaded: the nodes accept the submission but cannot process it in time. This hits every mining app equally. The *Net* badge in the header shows how many sessions currently get through. The app keeps retrying, clears leftovers and claims payouts automatically – just keep digging.
+Most likely the network is overloaded: the nodes accept the submission but cannot process it in time. This hits every mining app equally. In the header, *Net* shows how tough the network is right now (every single submit answer, including *queue full* and retries) and *✓* how many sessions of the wallets that are ON got through today. The app keeps retrying, clears leftovers and claims payouts automatically – just keep digging. A premined session that had to be thrown away after a failure is not counted as a second failure.
 
 **When does NACKL arrive?**
 The contract pays an epoch when the same wallet gets its next session through (from the next-but-one epoch on), usually a few minutes later. If no further session follows (wallet switched off, failures), the app sends `get_reward` within the time window. Tip: before closing the app for the night, keep it open a few minutes longer or tap `get_reward` in each wallet sheet.
@@ -153,15 +152,15 @@ Usually not. *Pair again* first checks whether your mining key is still valid on
 No. Each wallet has one mining key per app – pairing it on a second device replaces the key of the first one.
 
 **Many wallets / several devices on one internet connection?**
-A pause of 1–3 s between resends is a good balance. If the log shows frequent *429 Too Many Requests*, switch off *Cloudflare DNS* under ⚙ → Advanced options.
+The nodes limit requests per internet connection, and all devices on it count together. When *429 Too Many Requests* piles up, all wallets of a device slow down together by themselves (log: *Busy connection … knock slower*) and speed up again when it calms down. As a rule of thumb, about **8–10 wallets per connection** in total work best right now – more wallets often bring less, not more.
 
 **Restore mining – when?**
-If a wallet keeps failing while others succeed. It clears an old session on chain and reconnects. The app also does this by itself after repeated failures.
+If a wallet keeps failing while others succeed: wallet sheet → *Restore mining*. It clears an old session on chain and reconnects. The app also does this by itself after repeated failures, and it rebuilds a wallet's engine by itself if that stops answering.
 
 ## Security and privacy
 
 - Your wallet's private key **never leaves the AN Wallet**. The app only holds its own mining key pair, stored in the **Android Keystore**.
-- No account, no telemetry, no ads. The app talks only to the Acki Nacki endpoints (`mainnet.ackinacki.org`, `mainnet-cf.ackinacki.org`, `app-backend.ackinacki.org`) and, for DNS, to Cloudflare (`1.1.1.1`).
+- No account, no telemetry, no ads. The app talks only to the Acki Nacki endpoints (`mainnet.ackinacki.org`, `mainnet-cf.ackinacki.org`, `app-backend.ackinacki.org`) and, only if your network's DNS can't resolve them, to Cloudflare DNS (`1.1.1.1`).
 - Backups are encrypted with your password (AES-256-GCM, PBKDF2).
 
 See [PRIVACY.md](PRIVACY.md).
