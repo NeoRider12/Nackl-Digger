@@ -76,7 +76,7 @@
 - **Smart resubmission:** root and proof are signed once and resent unchanged on *queue full*, timeouts and gateway errors – the node recognises repeats instead of queueing copies
 - **Knocks until it's in:** every submission goes to both endpoints and the active block producer at once and keeps knocking for up to 55 s; a slow answer is not cut off (it is often the one being accepted) – a new attempt simply runs alongside
 - **Never stuck:** if the engine of a wallet stops answering, the session is closed and the engine rebuilt – the wallet keeps digging
-- **Shared brake per device:** when *429 Too Many Requests* piles up (several devices on one connection count together), all wallets knock slower and fewer submissions run at once – back to full speed when it calms down
+- **Shared pace for the block producer:** only the block producer answers *429 Too Many Requests* (several devices on one connection count together). All wallets of a device share one request budget for it that shrinks on every 429 and grows slowly again while it's calm – it settles just below the limit instead of swinging between full speed and brake. The endpoints and parallel connections are not throttled
 - **Staggered starts and sessions:** wallets don't hit the node in the same second; premined sessions go out 12–27 s after the new epoch, with a fixed offset per wallet
 - **Shared reads:** identical status requests of several wallets go out once
 - **Two endpoints with failover:** `mainnet` and `mainnet-cf`
@@ -153,7 +153,7 @@ Usually not. *Pair again* first checks whether your mining key is still valid on
 No. Each wallet has one mining key per app – pairing it on a second device replaces the key of the first one.
 
 **Many wallets / several devices on one internet connection?**
-The nodes limit requests per internet connection, and all devices on it count together. When *429 Too Many Requests* piles up, all wallets of a device slow down together by themselves (log: *Busy connection … knock slower*) and speed up again when it calms down. As a rule of thumb, about **8–10 wallets per connection** in total work best right now – more wallets often bring less, not more.
+The nodes limit requests per internet connection, and all devices on it count together. When *429 Too Many Requests* piles up, all wallets of a device share a request budget for the block producer that adapts by itself (log: *Block producer pace: … requests/min*). As a rule of thumb, about **4–6 wallets per connection** work best right now – more wallets often bring less, not more. Devices behind different connections (or VPN exits) don't count together.
 
 **Restore mining – when?**
 If a wallet keeps failing while others succeed: wallet sheet → *Restore mining*. It clears an old session on chain and reconnects. The app also does this by itself after repeated failures, and it rebuilds a wallet's engine by itself if that stops answering.
