@@ -102,7 +102,7 @@
 <p align="center"><em>Tablet in portrait with eight wallets · wallet sheet with epochs and payouts (demo values)</em></p>
 
 **Comfort & safety**
-- Header with CPU load, success rate (wallets that are ON), difficulty, network quality and device temperature. *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through
+- Header with CPU load, device temperature, network quality, **Pace** and success rate (wallets that are ON). *Pace %* shows how much of what the wallets want to send to the block producer the shared budget allows – ~100 % with 1–2 wallets, much lower when many wallets share a tight line; great for comparing connections or VPN exits. ⚙ → *Statistics* keeps min/max of Net, Pace, battery temperature and difficulty since app start, and shows what your connection tolerates at the block producer (*Line ≈ N/min*, measured with 5–6 wallets in 15–20 min). *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through
 - Heat protection: switches the wallets off when the device gets too hot and **back on by itself once it has cooled down** (background mode stays active meanwhile); daily tap limit; optional off/on at the new 24-h epoch – can also be applied to the day already running
 - **Encrypted backup** of settings and all pairings (restore after reinstalling)
 - Optional screen dimming while digging, down to **Extreme (−100 %)**: fully black with the lowest backlight, a tap lights it up for 30 s / 1 / 5 / 15 min (ring timer in ⚙)
