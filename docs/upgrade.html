@@ -191,6 +191,12 @@ function render(d) {
     vEl.className = 'verdict go';
     hH.textContent = 'All keepers announce it – switch pending';
     vEl.textContent = `All ${n} block keepers announce ${label(step)} – the condition from the public node code is met. Whether the network already runs ${ver(step.split('->')[1])} can't be read from this list (see “Why the list can't show the switch” below). The page shows “Switch done” as soon as a keeper reports plain ${ver(step.split('->')[1])}.`;
+    // Bekannter Fall: 1.0.7 → 1.0.8 läuft längst, die Keeper melden aber weiter den Pfeil
+    if (/1\.0\.7[^>]*->.*1\.0\.8/.test(step)) {
+      hH.textContent = '1.0.8 is live – the list just doesn\'t report it';
+      vEl.className = 'verdict go';
+      vEl.textContent = `The network has been running node 1.0.8 since early November 2026 (the 1.0.8 mining verifier rule is active since 3 Nov). All ${n} block keepers still report ${label(step)}: their node build supports both versions and writes exactly that into its epoch contract – so for this upgrade the list never shows plain 1.0.8. Nothing is pending.`;
+    }
     hEl.innerHTML = '<p class="note">This list cannot confirm the switch itself: a keeper\'s entry here comes from its epoch contract and only shows the new version after its own epoch renews – that takes up to a day, even if the network already runs the new version. The public API does not show which protocol version the blocks use.</p>';
   }
   else {
