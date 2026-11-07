@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/NeoRider12/Nackl-Digger/releases/latest"><b>⬇ Download the latest APK</b></a>
-  &nbsp;·&nbsp; Android 7+ &nbsp;·&nbsp; free
+  &nbsp;·&nbsp; Android 7+ &nbsp;·&nbsp; free &nbsp;·&nbsp; <a href="https://t.me/nackldigger">💬 Telegram group</a>
 </p>
 
 <p align="center">
@@ -167,6 +167,8 @@ If a wallet keeps failing while others succeed: wallet sheet → *Restore mining
 See [PRIVACY.md](PRIVACY.md).
 
 ## Feedback
+
+Questions, tips, logs and testing: **[t.me/nackldigger](https://t.me/nackldigger)** (Telegram group).
 
 Questions, bug reports, ideas: open an [issue](https://github.com/NeoRider12/Nackl-Digger/issues) or write on Telegram to **@NeoRider1**. A log helps a lot: ⚙ → *Save log to Downloads*.
 
