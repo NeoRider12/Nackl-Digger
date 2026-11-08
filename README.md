@@ -153,7 +153,13 @@ Usually not. *Pair again* first checks whether your mining key is still valid on
 No. Each wallet has one mining key per app – pairing it on a second device replaces the key of the first one.
 
 **Many wallets / several devices on one internet connection?**
-The nodes limit requests per internet connection, and all devices on it count together. When *429 Too Many Requests* piles up, all wallets of a device share a request budget for the block producer that adapts by itself (log: *Block producer pace: … requests/min*). As a rule of thumb, about **4–6 wallets per connection** work best right now – more wallets often bring less, not more. Devices behind different connections (or VPN exits) don't count together.
+The nodes limit requests per internet connection, and all devices on it count together. When *429 Too Many Requests* piles up, all wallets of a device share a request budget for the block producer that adapts by itself (log: *Block producer pace: … requests/min*; ⚙ → *Statistics* shows *Pace* and *Line*). Devices behind different connections (or VPN exits) don't count together.
+
+**How many wallets per device – what is the sweet spot?**
+About **4–5 wallets per device and connection**. A device confirms roughly the same number of sessions per hour with 4 or 5 wallets (in our test 5 even got ~14 % more, with 76–78 % success in calm hours); from **6 wallets on** the success rate drops clearly and the extra wallets only share the same sessions. So rather spread wallets over several devices than piling them onto one.
+
+**Why does a wallet earn less per session late in the day?**
+In our logs the NACKL per session falls with the taps a wallet already has that day: roughly full value up to ~4–5k taps, then clearly less (about half at ~6–7k, about a quarter at ~8k). Other wallets are not affected – a fresh wallet earns full value even late in the day. That's why it pays to run your stronger wallets (higher NACKL per session) spread over your devices from the start of the 24-h day, and if you have more wallets than slots, to swap a wallet at ~5k taps for a fresh one. Never switch the same wallet on in two apps or on two devices at the same time.
 
 **Restore mining – when?**
 If a wallet keeps failing while others succeed: wallet sheet → *Restore mining*. It clears an old session on chain and reconnects. The app also does this by itself after repeated failures, and it rebuilds a wallet's engine by itself if that stops answering.
