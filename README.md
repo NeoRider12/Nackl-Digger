@@ -145,7 +145,7 @@ First tap ☾ **BG** in the header (or ⚙ → *Set up background mode*) and tic
 **Nothing gets through – what can I try?**
 Work through this list – most problems are solved by the first points:
 1. **Update** to the latest APK and **restart the phone** (frees memory, fresh network connection).
-2. **Start small:** 1–2 wallets first, add more only when they run well. Run ⚙ → *Performance test* and stay at or below the recommendation – **4–5 wallets per device** is the sweet spot.
+2. **Start small:** 1–2 wallets first, add more only when they run well. Run ⚙ → *Performance test* and stay at or below the recommendation – **4 wallets per device** is the sweet spot.
 3. **Close other apps**, especially games, browsers with many tabs and other mining apps. Never run the same wallet in two apps or on two devices at the same time.
 4. **Keep the app in front**, best on the charger with **⚙ → Dim screen while digging → Extreme −100 %** – or set up ☾ **BG** completely (notifications, no battery restrictions, Autostart).
 5. **Give it time:** wait **at least 30 minutes** before judging. The network has busy phases where every app gets little through; the app keeps retrying and claims payouts by itself.
@@ -168,7 +168,7 @@ No. Each wallet has one mining key per app – pairing it on a second device rep
 The nodes limit requests per internet connection, and all devices on it count together. When *429 Too Many Requests* piles up, all wallets of a device share a request budget for the block producer that adapts by itself (log: *Block producer pace: … requests/min*; ⚙ → *Statistics* shows *Pace* and *Line*). Devices behind different connections (or VPN exits) don't count together.
 
 **How many wallets per device – what is the sweet spot?**
-About **4–5 wallets per device and connection**. A device confirms roughly the same number of sessions per hour with 4 or 5 wallets (in our test 5 even got ~14 % more, with 76–78 % success in calm hours); from **6 wallets on** the success rate drops clearly and the extra wallets only share the same sessions. So rather spread wallets over several devices than piling them onto one.
+About **4 wallets per device and connection**. A device confirms roughly the same number of sessions per hour whether it runs 4, 5 or 6 wallets – extra wallets mostly share the same sessions. A 5th wallet only pays off if it earns about as much per session as the others: in our test a weak 5th wallet added only ~4 % sessions to the device but took ~17 % from the four strong ones – a net loss. From **6 wallets on** the success rate drops clearly. So rather spread strong wallets over several devices (or connections) than piling them onto one.
 
 **Why does a wallet earn less per session late in the day?**
 In our logs the NACKL per session falls with the taps a wallet already has that day: roughly full value up to ~4–5k taps, then clearly less (about half at ~6–7k, about a quarter at ~8k). Other wallets are not affected – a fresh wallet earns full value even late in the day. That's why it pays to run your stronger wallets (higher NACKL per session) spread over your devices from the start of the 24-h day, and if you have more wallets than slots, to swap a wallet at ~5k taps for a fresh one. Never switch the same wallet on in two apps or on two devices at the same time.
