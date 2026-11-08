@@ -75,7 +75,7 @@
 **When the network is busy**
 - **Smart resubmission:** root and proof are signed once and resent unchanged on *queue full*, timeouts and gateway errors – the node recognises repeats instead of queueing copies
 - **Knocks until it's in:** every submission goes to both endpoints and the active block producer at once and keeps knocking for up to 55 s; a slow answer is not cut off (it is often the one being accepted) – a new attempt simply runs alongside
-- **Never stuck:** if the engine of a wallet stops answering, the session is closed and the engine rebuilt – the wallet keeps digging
+- **Never stuck:** if the engine of a wallet stops answering, the session is closed and the engine rebuilt – the wallet keeps digging. If multi-core fails once, the next rebuild tries it again instead of leaving all wallets on one core until a restart
 - **Shared pace for the block producer:** only the block producer answers *429 Too Many Requests* (several devices on one connection count together). All wallets of a device share one request budget for it that shrinks on every 429 and grows slowly again while it's calm – it settles just below the limit instead of swinging between full speed and brake. The endpoints and parallel connections are not throttled
 - **Staggered starts and sessions:** wallets don't hit the node in the same second; premined sessions go out 12–27 s after the new epoch, with a fixed offset per wallet
 - **Shared reads:** identical status requests of several wallets go out once
@@ -92,8 +92,10 @@
 - **Confirmed session:** a pickaxe with gold nuggets pulses in the wallet box, with the confirmed taps below it (`70 ✓`)
 - **Failed session:** the broken pickaxe bursts apart in slow motion, with the reason below it (`✗ not confirmed`)
 - **Payout:** an embossed $NACKL coin spins in the middle of the box, with the amount below it (`+0.56 NACKL`)
-- Each effect runs 6 seconds; several effects of one wallet play one after another. Buttons underneath stay usable
+- Success and payout run 10 seconds, a failure 6 seconds; several effects of one wallet play one after another. Buttons underneath stay usable
 - Pop-up messages only for things that need you, like a wallet that has to be paired again
+- **Wallet without payouts:** if a wallet's confirmed sessions bring no NACKL, it is not switched off any more – a notice over the wallet with a **Pair again** button shows it, and it disappears by itself as soon as a payout arrives
+- **Device overloaded:** if the app freezes several times for seconds (too many wallets for the device, little memory), a hint under the header says so, with a **Performance test** button – or **Restart app** if multi-core stopped
 
 <p align="center">
   <img src="docs/screenshots/NacklDigger-Android-portrait.png" height="520" alt="Tablet in portrait with eight wallets">
@@ -102,7 +104,7 @@
 <p align="center"><em>Tablet in portrait with eight wallets · wallet sheet with epochs and payouts (demo values)</em></p>
 
 **Comfort & safety**
-- Header with CPU load, device temperature, network quality, **Pace** and success rate (wallets that are ON). *Pace %* shows how much of what the wallets want to send to the block producer the shared budget allows – ~100 % with 1–2 wallets, much lower when many wallets share a tight line; great for comparing connections or VPN exits. ⚙ → *Statistics* keeps min/max of Net, Pace, battery temperature and difficulty since app start, and shows what your connection tolerates at the block producer (*Line ≈ N/min*, measured with 5–6 wallets in 15–20 min). *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through
+- Header with CPU load, device temperature, network quality, **Pace** and success rate (wallets that are ON). *Pace %* shows how much of what the wallets want to send to the block producer the shared budget allows – ~100 % with 1–2 wallets, much lower when many wallets share a tight line; great for comparing connections or VPN exits. ⚙ → *Statistics* keeps min/max of Net, Pace, battery temperature and difficulty since app start, and shows what your connection tolerates at the block producer (*Line ≈ N/min*, measured with 5–6 wallets in 15–20 min). *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through. While all wallets rest, *Net ~31 %* (dashed) keeps the last value measured while submitting instead of the much higher read-only value
 - Heat protection: switches the wallets off when the device gets too hot and **back on by itself once it has cooled down** (background mode stays active meanwhile); daily tap limit; optional off/on at the new 24-h epoch – can also be applied to the day already running
 - **Encrypted backup** of settings and all pairings (restore after reinstalling)
 - Optional screen dimming while digging, down to **Extreme (−100 %)**: fully black with the lowest backlight, a tap lights it up for 30 s / 1 / 5 / 15 min (ring timer in ⚙)
@@ -139,6 +141,16 @@ Yes, with ☾ **BG** (background mode) in the header. It shows a notification wh
 **The app keeps getting closed in the background – what can I do?**
 First tap ☾ **BG** in the header (or ⚙ → *Set up background mode*) and tick off the checklist: notifications, *no battery restrictions* and the manufacturer setting shown there (*Autostart*, *Never sleeping apps* …). If Android still ends the app, it is usually **memory**: every wallet runs its own engine and needs its own share of RAM, so 8–12 wallets on a phone with 3–4 GB can be too much while other apps are open. **Start fewer wallets** (e.g. 4 instead of 8) and close apps you don't need.
 **Most reliable alternative:** leave the app in front with **⚙ → Dim screen while digging → Extreme −100 %**. The screen stays on but is fully black with the lowest backlight, so Android treats the app as in use and doesn't end it – a tap lights it up again. Best on the charger. The log shows free memory every 10 minutes (*Memory: … MB free*), warns with *Memory LOW* when Android may start ending apps, and – on Android 11 and newer – tells you after a restart why Android ended the app.
+
+**Nothing gets through – what can I try?**
+Work through this list – most problems are solved by the first points:
+1. **Update** to the latest APK and **restart the phone** (frees memory, fresh network connection).
+2. **Start small:** 1–2 wallets first, add more only when they run well. Run ⚙ → *Performance test* and stay at or below the recommendation – **4–5 wallets per device** is the sweet spot.
+3. **Close other apps**, especially games, browsers with many tabs and other mining apps. Never run the same wallet in two apps or on two devices at the same time.
+4. **Keep the app in front**, best on the charger with **⚙ → Dim screen while digging → Extreme −100 %** – or set up ☾ **BG** completely (notifications, no battery restrictions, Autostart).
+5. **Give it time:** wait **at least 30 minutes** before judging. The network has busy phases where every app gets little through; the app keeps retrying and claims payouts by itself.
+6. **Look at the header:** low *Net* with *Pace* far below 100 % → too many wallets for your connection; a hint *Device overloaded* → too many wallets for your device.
+7. Still stuck? Send the log (⚙ → *Save log to Downloads*) in the [Telegram group](https://t.me/nackldigger).
 
 **My sessions say "not confirmed" – is the app broken?**
 Most likely the network is overloaded: the nodes accept the submission but cannot process it in time. This hits every mining app equally. In the header, *Net* shows how tough the network is right now (every single submit answer, including *queue full* and retries) and *✓* how many sessions of the wallets that are ON got through today. The app keeps retrying, clears leftovers and claims payouts automatically – just keep digging. A premined session that had to be thrown away after a failure is not counted as a second failure.
