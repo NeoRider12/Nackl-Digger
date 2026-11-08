@@ -69,7 +69,7 @@
 
 **Background mode (optional)**
 - Keeps taps, submissions and reward claims running with the screen off or another app in front
-- Setup sheet with checklist: notifications, *no battery restrictions*, and the exact menu path for Samsung, Xiaomi/Redmi, Huawei/Honor, Oppo/Realme/OnePlus, Vivo and Asus
+- Setup sheet with checklist: notifications, *no battery restrictions*, and the exact menu path for Samsung, Xiaomi/Redmi, Huawei/Honor, Oppo/Realme/OnePlus, Vivo, Asus and Tecno/Infinix/itel
 - Permanent notification with live status, **Total NACKL today · yesterday** of all wallets and a Stop button; runs only while a wallet is ON
 
 **When the network is busy**
