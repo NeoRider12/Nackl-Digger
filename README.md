@@ -5,8 +5,8 @@
 <h1 align="center">NeoRiders Nackl Digger</h1>
 
 <p align="center">
-  Android app for mining <b>NACKL</b> with the Acki Nacki Bee Engine – <b>2 to 12 wallets at once</b> on one phone or tablet.<br>
-  The app taps for you (<b>AUTO</b>), keeps digging with the screen off, and claims your rewards.
+  <b>All-in-one</b> Android app for Acki Nacki: <b>mining NACKL</b>, <b>Popit Game boost claims</b> and <b>MamaBoard upgrades</b> – 2 to 12 wallets at once on one phone or tablet.<br>
+  The app taps for you (<b>AUTO</b>), keeps digging with the screen off, claims your rewards and boost – <b>100 % local, no cloud</b>.
 </p>
 
 <p align="center">
@@ -19,6 +19,8 @@
 </p>
 <p align="center"><em>Tablet with eight wallets in AUTO, today's NACKL next to each name (demo values)</em></p>
 
+> 🖥️ **100 % local – no cloud.** Everything runs on your own phone or tablet: mining, boost claims and MamaBoard upgrades. There is no server or cloud service in between, so nobody else holds your keys or logins – but it uses the **real computing power of your device**: it gets slower for other apps, uses battery and **can get very warm**. Keep it on the charger, out of the sun and without a case, and use the built-in heat protection.
+
 ---
 
 ## Top features
@@ -28,7 +30,29 @@
 - ⏻ **A real power button per wallet** – a softly breathing red standby light when off, a shimmer in the wallet's colour when on
 - 👀 **Always see what's running** – *root 1/2 · submitting*, *proof 2/2 · submitting*, *premined · ready*, also for the previous session while the next one is already being mined
 - ⚡ **Performance test** in ⚙ Settings – measures your device and tells you how many wallets it can run
-- 🌙 **Background mode (optional)** – reliable digging with the screen off: ☾ BG in the header, with a step-by-step setup (notifications, battery, manufacturer settings) and a notification with a Stop button
+- 🔄 **Smart swap** – mark reserve wallets with an **S** (long press on the power button): when a running wallet is worn out late in the day, a fresh S-wallet takes over by itself – and at the new 24-h day everything switches back
+- 🌱 **Boost auto-claim** – connect a wallet once and the app claims the Popit Game farm boost 5× a day and upgrades your MamaBoard when you have enough boost
+- ↔️ **Swap places** – hold a wallet's name for 1.5 s and drag it onto another; *Wallet 1, 2, …* stay with the position, colours move with the wallet
+- 🌙 **Smart swap (S-wallets)**
+- **Why:** the NACKL per session falls with the taps a wallet already has that day – roughly full value up to ~5k taps, about half at ~7k, a quarter at ~8k, and nothing after 12 000 (Miner contract). A fresh wallet earns full value even late in the day
+- **Mark reserve wallets:** long press (0.6 s) on a wallet's power button → a small pulsing **S**. Long press again removes it. S-wallets stay off until they are needed
+- **The rule:** a running wallet with **more than 6000 taps today** whose **last 6 payouts** are **15 % below** what the best free S-wallet earns fresh is switched off, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
+- **New 24-h day:** swapped-in S-wallets go off, the original wallets come back on
+- **Knows your wallets:** the expected value per session is learned from each wallet's own payouts; until then it is estimated from the **wallet level**, read from the chain. The wallet sheet shows level, *fresh*, *now* and the last 6 payouts
+- ⚠️ **An S-wallet must not run anywhere else** – not on another device and not in another app. Each device only knows its own wallets
+
+**Boost · Popit Game**
+- **Connect once per wallet:** wallet sheet → *Connect for Boost* → confirm in the AN Wallet (QR or *Open in AN Wallet*). This is a separate login for the game, not the mining key; it stays on your device and only allows actions in the Popit Game
+- **Automatic:** with ⚙ → *Boost · Popit Game* on, the app claims – also for wallets that are not mining – the farm reward as soon as it is ready (5× a day), starts the next round and – if *Auto upgrade* is ticked – buys the next MamaBoard part when your boost covers the price
+- **By hand:** *Claim now* and *Upgrade MamaBoard* buttons in the wallet sheet, with farm progress (x/5), boost balance and the next part
+- **In the tap row:** a small ring fills up until the next claim, *x/5* next to it; *+552 Boost* floats up when claimed
+- Don't let another farm tool claim the same wallet at the same time
+
+**Order and numbering**
+- **Swap places by drag & drop:** hold a wallet's name for 1.5 s, then drag it onto another wallet (moving earlier just scrolls). **The number belongs to the position** – the top box is always *Wallet 1* – while each wallet keeps its colour
+- **Fewer wallets keep the ones in front:** with *Wallets on this device* = 6 the first 6 are shown; the others are only hidden (pairing kept) and come back when you raise the number. ⚙ Settings lists hidden paired wallets
+
+**Background mode (optional)** – reliable digging with the screen off: ☾ BG in the header, with a step-by-step setup (notifications, battery, manufacturer settings) and a notification with a Stop button
 - 📶 **Network-friendly with many wallets** – staggered starts and sessions, shared status reads, smart resubmission and endpoint failover
 - 💰 **Today's NACKL next to every wallet**, rewards claimed automatically, per-epoch overview of sessions and payouts
 - ⛏️ **See every result at a glance** – a gold-laden pickaxe for a confirmed session, a pickaxe bursting apart in slow motion for a failed one, a spinning $NACKL coin for every payout – right in the wallet's box, no pop-up messages covering the other wallets
@@ -141,6 +165,9 @@ Yes, with ☾ **BG** (background mode) in the header. It shows a notification wh
 **The app keeps getting closed in the background – what can I do?**
 First tap ☾ **BG** in the header (or ⚙ → *Set up background mode*) and tick off the checklist: notifications, *no battery restrictions* and the manufacturer setting shown there (*Autostart*, *Never sleeping apps* …). If Android still ends the app, it is usually **memory**: every wallet runs its own engine and needs its own share of RAM, so 8–12 wallets on a phone with 3–4 GB can be too much while other apps are open. **Start fewer wallets** (e.g. 4 instead of 8) and close apps you don't need.
 **Most reliable alternative:** leave the app in front with **⚙ → Dim screen while digging → Extreme −100 %**. The screen stays on but is fully black with the lowest backlight, so Android treats the app as in use and doesn't end it – a tap lights it up again. Best on the charger. The log shows free memory every 10 minutes (*Memory: … MB free*), warns with *Memory LOW* when Android may start ending apps, and – on Android 11 and newer – tells you after a restart why Android ended the app.
+
+**What is Smart swap and when should I use it?**
+If you have more wallets than slots that run well on a device (sweet spot: 4), mark the extra ones as **S-wallets** (long press on the power button). They wait while your main wallets dig and take over automatically once a main wallet has more than 6000 taps and earns clearly less than a fresh S-wallet would – usually in the second half of the 24-h day. At the new day the main wallets come back. Important: an S-wallet must not be switched on on another device or in another app at the same time.
 
 **Nothing gets through – what can I try?**
 Work through this list – most problems are solved by the first points:
