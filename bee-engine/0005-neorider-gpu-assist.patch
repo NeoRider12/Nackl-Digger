@@ -1,0 +1,195 @@
+NeoRider patch 0005 on top of 0001-0004 (gosh-sh/bee-engine v6.0.0, commit 015bc466613e7b7c41f272dc16ba0cacbf0e4d93).
+- GPU assist: tap_params() returns {seed,index,complexity} of the next tap leaf (JSON); add_tap_nonce(x, y, now_ms, nonce_lo, nonce_hi) queues a tap with the timestamp and nonce found outside the engine (WebGPU).
+- The engine computes and checks that leaf exactly like its own search; if the nonce does not meet the target it falls back to the normal CPU search. tap_computed reports "gpu": true/false.
+License: AGPL-3.0-only (same as upstream).
+
+diff --git a/bee_miner/src/core/context.rs b/bee_miner/src/core/context.rs
+index 3525ef3..f60ab09 100644
+--- a/bee_miner/src/core/context.rs
++++ b/bee_miner/src/core/context.rs
+@@ -85,6 +85,46 @@ impl MiningCore {
+         Some(computed_leaf)
+     }
+ 
++    /// NeoRider patch 0005 (GPU assist): like `compute`, but with a nonce found outside the
++    /// engine. Returns the leaf and whether the given nonce was used (false = CPU fallback).
++    pub fn compute_with_nonce(&mut self, params: ParamsOfCompute, nonce: u64) -> Option<(ComputedLeaf, bool)> {
++        if self.ends_at_ms.is_none() {
++            self.ends_at_ms = Some(params.now_ms.saturating_add(self.duration_ms));
++        }
++        if self.deadline_reached_ms(params.now_ms) {
++            return None;
++        }
++        if self.committed {
++            return None;
++        }
++        if let Some(prev) = self.last_now_ms {
++            if params.now_ms < prev {
++                return None;
++            }
++        }
++        self.last_now_ms = Some(params.now_ms);
++
++        let job_index = self.completed.len() as u128;
++        let (computed_leaf, used) = self.hash_processor.calc_hash_with_nonce(
++            ParamsOfCalcHash {
++                seed: &self.seed,
++                x: params.x,
++                y: params.y,
++                timestamp: params.now_ms,
++                complexity: self.target_bits,
++                idx: job_index,
++            },
++            nonce,
++        );
++        self.completed.push(computed_leaf.clone());
++        Some((computed_leaf, used))
++    }
++
++    /// NeoRider patch 0005: index of the next tap leaf (= taps computed so far).
++    pub fn next_index(&self) -> u64 {
++        self.completed.len() as u64
++    }
++
+     pub fn get_merkle(&mut self) -> ResultOfGetMerkleSnapshot {
+         if !self.committed {
+             self.hash_processor.commit();
+diff --git a/bee_miner/src/core/processor.rs b/bee_miner/src/core/processor.rs
+index 14c02a6..1aa5913 100644
+--- a/bee_miner/src/core/processor.rs
++++ b/bee_miner/src/core/processor.rs
+@@ -55,6 +55,28 @@ impl MiningProcessor {
+         }
+     }
+ 
++    /// NeoRider patch 0005 (GPU assist): use a nonce found outside the engine (WebGPU). The
++    /// leaf is computed and checked here exactly like in `calc_hash_blake`; if the nonce does
++    /// not meet the target (wrong seed/index/timestamp, GPU error) the normal CPU search runs.
++    pub fn calc_hash_with_nonce(&mut self, params: ParamsOfCalcHash, nonce: u64) -> (ComputedLeaf, bool) {
++        let threshold = u128::MAX >> params.complexity;
++        let leaf = Leaf {
++            index: params.idx,
++            nonce,
++            seed: params.seed.to_string(),
++            x: params.x,
++            y: params.y,
++            timestamp: params.timestamp,
++            complexity: params.complexity,
++        };
++        let computed_leaf = leaf.compute();
++        if computed_leaf.hash_num() < threshold {
++            self.merkle.add_leaf(&computed_leaf);
++            return (computed_leaf, true);
++        }
++        (self.calc_hash_blake(params), false)
++    }
++
+     pub fn get_merkle_root(&self) -> Vec<u8> {
+         self.merkle.get_merkle_root()
+     }
+diff --git a/bee_miner/src/wasm/miner.rs b/bee_miner/src/wasm/miner.rs
+index 93bf5f0..cd8409e 100644
+--- a/bee_miner/src/wasm/miner.rs
++++ b/bee_miner/src/wasm/miner.rs
+@@ -273,6 +273,7 @@ impl Miner {
+             in_flight_seed: String::new(),
+             premine_release: self.premine_release.clone(),
+             premine_discard: self.premine_discard.clone(),
++            tap_next: Rc::new(Cell::new(0)),
+         };
+ 
+         let seeds_ref = self.seeds.clone();
+@@ -313,6 +314,36 @@ impl Miner {
+         Ok(())
+     }
+ 
++    /// NeoRider patch 0005 (GPU assist): parameters of the next tap leaf of the running worker
++    /// as JSON `{"seed","index","complexity"}`, or an empty string when no worker is computing.
++    #[wasm_bindgen(js_name = tap_params)]
++    pub fn tap_params(&self) -> String {
++        match self.workers.borrow().iter().find(|w| w.status == MinerStatus::Computing) {
++            Some(w) if !w.seed.is_empty() => serde_json::json!({
++                "seed": w.seed,
++                "index": w.tap_next.get(),
++                "complexity": w.hard_complexity,
++            })
++            .to_string(),
++            _ => String::new(),
++        }
++    }
++
++    /// NeoRider patch 0005 (GPU assist): tap with the timestamp used for the GPU search and the
++    /// nonce it found (as two u32 halves). The engine checks the leaf and falls back to its own
++    /// CPU search if the nonce does not meet the target.
++    #[wasm_bindgen(js_name = add_tap_nonce)]
++    pub fn add_tap_nonce(&self, x: u32, y: u32, now_ms: f64, nonce_lo: u32, nonce_hi: u32) -> Result<(), JsError> {
++        let nonce = ((nonce_hi as u64) << 32) | nonce_lo as u64;
++        match self.workers.borrow().iter().find(|w| w.status == MinerStatus::Computing) {
++            Some(worker) => {
++                let _ = worker.sender.unbounded_send(MinerCommand::QueueTapNonce { x, y, now_ms: now_ms as u64, nonce });
++            }
++            None => return Err(JsError::new("No running workers to add tap to")),
++        }
++        Ok(())
++    }
++
+     #[wasm_bindgen(js_name = remove_seed)]
+     pub fn remove_seed(&self, seed: String) {
+         self.seeds.borrow_mut().retain(|v| v != &seed);
+@@ -468,6 +499,7 @@ impl Miner {
+             in_flight_seed,
+             premine_release: self.premine_release.clone(),
+             premine_discard: self.premine_discard.clone(),
++            tap_next: Rc::new(Cell::new(0)),
+         };
+ 
+         let seeds_ref = self.seeds.clone();
+diff --git a/bee_miner/src/wasm/worker.rs b/bee_miner/src/wasm/worker.rs
+index fa39975..5b1666a 100644
+--- a/bee_miner/src/wasm/worker.rs
++++ b/bee_miner/src/wasm/worker.rs
+@@ -69,6 +69,8 @@ const INTERVAL_WAIT_MS: u64 = 60_000;
+ pub(crate) enum MinerCommand {
+     Stop,
+     QueueTap { x: u32, y: u32 },
++    /// NeoRider patch 0005 (GPU assist): tap with timestamp and nonce found by the GPU.
++    QueueTapNonce { x: u32, y: u32, now_ms: u64, nonce: u64 },
+     SendSessionInterval(mvsystem::miner::events::SessionIntervalData),
+     ProcessSessionAccepted { wasm_result: String },
+     ProcessSessionRejected { wasm_result: String },
+@@ -145,6 +147,9 @@ pub(crate) struct MinerWorker {
+     /// NewGoblin premine: `release_submit()` / `discard_premine()`, shared with the Miner.
+     pub premine_release: Rc<Cell<bool>>,
+     pub premine_discard: Rc<Cell<bool>>,
++    /// NeoRider patch 0005 (GPU assist): index of the next tap leaf, shared with the Miner so
++    /// JS can ask for the leaf parameters (`tap_params()`) before searching on the GPU.
++    pub tap_next: Rc<Cell<u64>>,
+ }
+ 
+ impl MinerWorker {
+@@ -431,11 +436,25 @@ pub(crate) async fn run(
+             Ok(Some(event)) => match event {
+                 MinerCommand::QueueTap { x, y } => {
+                     tap_core.compute(ParamsOfCompute { x, y, now_ms });
++                    worker.tap_next.set(tap_core.next_index());
+                     send_callback(
+                         &callback,
+                         CallbackData::data("tap_computed", Some(json!({"worker_id": worker.id}))),
+                     );
+                 }
++                MinerCommand::QueueTapNonce { x, y, now_ms: tap_ms, nonce } => {
++                    let used = tap_core
++                        .compute_with_nonce(ParamsOfCompute { x, y, now_ms: tap_ms }, nonce)
++                        .map(|(_, used)| used);
++                    worker.tap_next.set(tap_core.next_index());
++                    send_callback(
++                        &callback,
++                        CallbackData::data(
++                            "tap_computed",
++                            Some(json!({"worker_id": worker.id, "gpu": used})),
++                        ),
++                    );
++                }
+                 MinerCommand::Stop => {
+                     break;
+                 }

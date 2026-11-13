@@ -1,54 +1,20 @@
-# Modified Bee Engine (GNU AGPL-3.0)
+# Patched Bee Engine SDK
 
-NeoRiders Nackl Digger ships a **modified build of Bee Engine v6.0.0** by GOSH TECHNOLOGY LTD.
-Bee Engine is licensed under the **GNU Affero General Public License v3.0** – see [LICENSE.md](LICENSE.md).
-This folder is the corresponding source of the modification.
-
-## Upstream
-
-- Repository: https://github.com/gosh-sh/bee-engine
-- Tag: `v6.0.0` (commit `015bc466613e7b7c41f272dc16ba0cacbf0e4d93`)
-
-## Modification
-
-Four patches, applied in file-name order:
+The Android build uses `gosh-sh/bee-engine` **v6.0.0** (commit `015bc466613e7b7c41f272dc16ba0cacbf0e4d93`)
+with five patches, applied in file-name order:
 
 | Patch | From | What it does |
 |---|---|---|
-| [`0001-newgoblin-delivery-and-diagnostics.patch`](0001-newgoblin-delivery-and-diagnostics.patch) | goblingames (NewGoblin) | Root and proof are signed once and the same message is resent until accepted, landed on chain or a deadline; submit policy and epoch deadline set by the app; interval read from the chain if the event is missing; stale session data cancelled; diagnostic callbacks. |
-| [`0002-newgoblin-premine.patch`](0002-newgoblin-premine.patch) | goblingames (NewGoblin) | **Premine**: while one session is being submitted, the next one is mined, held and submitted once the previous one is through. |
-| [`0003-newgoblin-premine-chain-wait.patch`](0003-newgoblin-premine-chain-wait.patch) | goblingames (NewGoblin) | Premine waits when the chain read is one seed rotation behind. |
-| [`0004-neorider-polling-difficulty-benchmark.patch`](0004-neorider-polling-difficulty-benchmark.patch) | NeoRider | Lighter miner event polling (2.5 s only while a worker is alive, else 10 s; 25 instead of 100 events), mining difficulty in `get_miner_data`, `benchmark_hashes` for the performance test. |
+| `0001-newgoblin-delivery-and-diagnostics.patch` | goblingames (NewGoblin) | Root and proof are signed once and the same message is resent until accepted, landed on chain or a deadline; `set_submit_policy(root_ms, proof_ms, retry_min_ms, retry_max_ms)`, `set_epoch_deadline(ms)`, `get_session_state()`; interval read from the chain if the event is missing; stale session data cancelled; diagnostic callbacks (`send_attempt`, `interval_from_chain`, …). |
+| `0002-newgoblin-premine.patch` | goblingames (NewGoblin) | **Premine**: while one session is being submitted, a second worker mines the next one (`can_premine()`, `premine(ms, cb)`), holds it and submits it after `release_submit()` once the previous one is through; `discard_premine()`. |
+| `0003-newgoblin-premine-chain-wait.patch` | goblingames (NewGoblin) | Premine waits when the chain read is one seed rotation behind. |
+| `0004-neorider-polling-difficulty-benchmark.patch` | NeoRider | Miner events polled every 2.5 s only while a worker is alive (else 10 s), last 25 instead of 100 events; `get_miner_data` returns `easy_complexity` / `hard_complexity` and `mbi_cur` (wallet level); `benchmark_hashes(complexity, ms)` for the performance test. |
+| `0005-neorider-gpu-assist.patch` | NeoRider | **GPU assist**: `tap_params()` returns the next tap leaf's `{seed, index, complexity}` (JSON); `add_tap_nonce(x, y, now_ms, nonce_lo, nonce_hi)` queues a tap with a nonce found by the app on the GPU (WebGPU or OpenGL ES). The engine computes and checks the leaf itself and falls back to its own CPU search if the nonce does not meet the target; `tap_computed` reports `gpu: true/false`. |
 
-Patches 0001–0003 and [`Cargo.lock`](Cargo.lock) are taken unchanged from the Corresponding Source published by goblingames: https://github.com/andresCadavidT/goblingames/tree/main/source/bee-sdk-6.0.0-ng.3 – thanks to its author for sharing it.
+Patches 0001–0003 and `Cargo.lock` are taken unchanged from the Corresponding Source published by
+goblingames: https://github.com/andresCadavidT/goblingames/tree/main/source/bee-sdk-6.0.0-ng.3 –
+thanks to its author for sharing it.
 
-No other files are changed.
-
-## Build
-
-Requirements: Rust (stable) with target `wasm32-unknown-unknown`, `wasm-pack`, `clang` and `llvm` (for `blst`).
-
-```bash
-# some dependencies are listed as ssh:// – the repositories are public over HTTPS
-git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
-git config --global url."https://github.com/".insteadOf "git@github.com:" --add
-
-git clone --depth 1 --branch v6.0.0 https://github.com/gosh-sh/bee-engine.git
-cd bee-engine
-sed -i '/^dodex-sdk = /d' bee_wallet/Cargo.toml   # dev-dependency only, as upstream CI
-for p in 0001-newgoblin-delivery-and-diagnostics 0002-newgoblin-premine 0003-newgoblin-premine-chain-wait 0004-neorider-polling-difficulty-benchmark; do
-  git apply /path/to/$p.patch
-done
-cp /path/to/Cargo.lock .
-
-export CC_wasm32_unknown_unknown=clang
-export AR_wasm32_unknown_unknown=llvm-ar
-bash scripts/build_wasm.sh sdk
-# result: bee_sdk/pkg/bee_sdk.js, bee_sdk_bg.wasm, bee_sdk.d.ts
-```
-
-These three files replace the ones from the npm package `@teamgosh/bee-sdk@6.0.0` inside the app.
-
-## Copyright
-
-Bee Engine © 2026 GOSH TECHNOLOGY LTD. – Patches 0001–0003 by the author of goblingames, patch 0004 © 2026 NeoRider; all provided under the same license (AGPL-3.0).
+The GitHub workflow clones v6.0.0, removes the `dodex-sdk` dev-dependency (as upstream CI), applies the
+patches, uses this `Cargo.lock`, builds the WASM with `scripts/build_wasm.sh sdk` and replaces the files of
+`@teamgosh/bee-sdk` before bundling. Bee Engine is AGPL-3.0; all patches are under the same licence.
