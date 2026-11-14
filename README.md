@@ -132,7 +132,7 @@
 - Pop-up messages only for things that need you, like a wallet that has to be paired again
 - **Wallet without payouts:** if a wallet's confirmed sessions bring no NACKL, it is not switched off any more – a notice over the wallet with a **Pair again** button shows it, and it disappears by itself as soon as a payout arrives
 - **Taps counted:** if the contract counts fewer taps than were sent (device too slow for this many wallets at the current difficulty), the session dot turns into a **green ring** – run fewer wallets on that device
-- **Session dots:** green = confirmed, green ring = confirmed but only part of the taps counted, red = failed
+- **Session dots** (last epochs): green = confirmed with all 70 taps, **green ring** = confirmed but only part of the taps counted (e.g. 65/70 – the payout is a bit smaller), red = failed. The exact count per epoch is in the wallet window, session table, column *Taps*
 - **Wallet sheet:** *Status – ON/OFF since hh:mm*
 - **Device overloaded:** if the app freezes several times for seconds (too many wallets for the device, little memory), a hint under the header says so, with a **Performance test** button – or **Restart app** if multi-core stopped
 
