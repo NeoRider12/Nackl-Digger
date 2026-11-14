@@ -252,4 +252,4 @@ Provided as is, without warranty. Mining results depend on the Acki Nacki networ
 
 ---
 
-*Older desktop version (Windows):* see the commit history of this repository.
+*Android only – there is no Windows or desktop version, and none is planned. Android runs the miner quietly and very efficiently, especially with GPU assist.*
