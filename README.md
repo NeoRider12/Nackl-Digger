@@ -37,7 +37,7 @@
 - 🌙 **Smart swap (S-wallets)**
 - **Why:** the NACKL per session falls with the taps a wallet already has that day – roughly full value up to ~5k taps, about half at ~7k, a quarter at ~8k, and nothing after 12 000 (Miner contract). A fresh wallet earns full value even late in the day
 - **Mark reserve wallets:** long press (0.6 s) on a wallet's power button → a small pulsing **S**. Long press again removes it. S-wallets stay off until they are needed
-- **The rule:** a running wallet with **more than 6000 taps today** (*Swap from* in the wallet sheet: 6k · 8k · 10k · **12k** – with 12k it runs to the daily limit, e.g. for the top ten) whose **last 6 payouts** are **15 % below** what the best free S-wallet earns fresh is switched off, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
+- **The rule:** a running wallet with **more than 6000 taps today** (*Swap from* in the wallet sheet: 5k · 6k · 8k · 10k · **12k** – with 12k it runs to the daily limit, e.g. for the top ten) whose **last 6 payouts** are **15 % below** what the best free S-wallet earns fresh is switched off, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
 - **Daily limit reached:** when a wallet stops at 12,000 taps, the best free S-wallet takes over for the rest of the day
 - **New 24-h day:** swapped-in S-wallets go off, the original wallets come back on
 - **Knows your wallets:** the expected value per session is learned from each wallet's own payouts while it has fewer than 4,000 taps that day; until then it is estimated from the **wallet level**, read from the chain (S-wallets that are off are checked every 30 min). The wallet sheet shows level, *fresh*, *now* and the last 6 payouts – **forget** deletes a learned value. ⚙ → *Smart swap · S-wallets* explains it all and lists your S-wallets
@@ -120,6 +120,8 @@
 **Payouts**
 - **Automatic claiming:** if a confirmed epoch is not paid out with the next session in time, the app sends `get_reward` itself, so rewards don't expire – but never while a session of that wallet is being submitted, so the two can't get in each other's way
 - **NACKL today** next to every wallet name (current 24-h day)
+- ⚙ → Statistics: **NACKL today · ≈ expected · yesterday** of all wallets on the device
+- **Automatic log** (optional): saved to Downloads at 00:00 · 08:00 · 16:00
 - **Per-epoch overview:** status, taps and NACKL received for every session; last payout with time on the main screen
 - **Wallet sheet:** today's total, locked and unlocked balance
 
