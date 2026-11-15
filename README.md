@@ -98,7 +98,7 @@
 - **Multi-core:** without GPU every wallet computes its taps on its own CPU core; the engine is compiled once for all wallets
 - **Performance test:** 1 wallet alone, then 2/4/6/8/10/12 wallets at once, plus the GPU, at the current difficulty – with a recommendation (*With GPU assist up to N*). Wallets that are ON are paused for the test and switched back on afterwards. The difficulty is known even with all wallets off (last value, read once at start); before the first pairing you can pick it yourself (*auto · 20–25*)
 - **Epoch-aware:** shows taps, duration and time left; waits for the next epoch instead of starting a session that could not finish in time
-- **Premining:** the next session is mined while the previous one is still being submitted. If the previous one was credited, the next goes out right after the new epoch starts – no epoch is lost to a slow network (Bee Engine patches by the author of goblingames). A premined session that can't be used after a failure is not counted as a second failure
+- **Premining:** the next session is mined while the previous one is still being submitted. If the previous one was credited, the next goes out right after the new epoch starts – no epoch is lost to a slow network (Bee Engine patches by act / Goblin 😊). A premined session that can't be used after a failure is not counted as a second failure
 - **Patient submitting:** root (up to 210 s) and proof (up to 240 s) are resent unchanged, also after the epoch has ended – the session still counts
 
 **Background mode (optional)**
@@ -244,7 +244,7 @@ Questions, bug reports, ideas: open an [issue](https://github.com/NeoRider12/Nac
 
 ## Licenses
 
-- The app includes **Bee Engine 6.0.0** by GOSH TECHNOLOGY LTD., **modified**, licensed under the **GNU AGPL-3.0**. The modifications (patches, three of them by the author of goblingames), the license text and build instructions are in [`bee-engine/`](bee-engine/).
+- The app includes **Bee Engine 6.0.0** by GOSH TECHNOLOGY LTD., **modified**, licensed under the **GNU AGPL-3.0**. The modifications (patches by act / Goblin 😊 and by NeoRider), the license text and build instructions are in [`bee-engine/`](bee-engine/).
 - App code and logo © NeoRider. All rights reserved unless stated otherwise.
 - Acki Nacki and NACKL are names of their respective owners. This is a community app, not an official Acki Nacki product.
 
