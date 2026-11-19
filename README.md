@@ -177,6 +177,9 @@ Live page showing how many Acki Nacki block keepers support the next node versio
 **AUTO or tapping yourself?**
 AUTO is the easy way: press the power button and let the app dig. To tap yourself, switch the small AUTO button off. It only taps while the wallet is ON and a session can still finish in the epoch, and it stops at the network's daily limit of 12,000 taps per wallet. Run ⚙ → *Performance test* once to see how many wallets your device keeps up with.
 
+**CPU shows 99 % (red) – is that bad?**
+No. The CPU chip shows the busiest single thread, averaged over the last minute – not the whole phone. Each wallet builds a proof for every submission, which keeps one thread near 100 % for a few seconds while the other cores are mostly idle, so short peaks are normal. Only if it stays red for minutes *and* sessions fail or the phone gets hot, try fewer wallets.
+
 **How many wallets can my device run?**
 Open ⚙ → *Performance test* (about 25 s; wallets that are ON are paused for it). It measures CPU and GPU at the current difficulty and recommends how many wallets your device can run (up to 12). With GPU assist the device is rarely the limit – the internet connection and the network are: add wallets step by step and watch the ✓ rate and *Pace*. With 8 or more wallets keep an eye on the temperature in the header during the first hour – heat protection switches wallets off if the device gets too hot.
 
