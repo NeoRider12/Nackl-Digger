@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="900" height="480" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="480" rx="16" fill="#1c1913"/>
+<text x="70" y="40" fill="#f2ebdd" font-size="20" font-weight="700">Payout per session vs. taps that day</text>
+<text x="70" y="64" fill="#a2967f" font-size="13">Relative to the first 20 sessions of the same wallet on the same day · 13 days, 18,903 payouts · Nov 2026</text>
+<rect x="70.0" y="96" width="186.7" height="320" fill="#f5b631" fill-opacity="0.06"/>
+<text x="163.3" y="114" fill="#a2967f" font-size="12" text-anchor="middle">full payout up to ~2,800 taps</text>
+<line x1="70" x2="870" y1="416.0" y2="416.0" stroke="#352e22" stroke-width="1"/>
+<text x="60" y="420.0" fill="#a2967f" font-size="12" text-anchor="end">0 %</text>
+<line x1="70" x2="870" y1="349.3" y2="349.3" stroke="#352e22" stroke-width="1"/>
+<text x="60" y="353.3" fill="#a2967f" font-size="12" text-anchor="end">25 %</text>
+<line x1="70" x2="870" y1="282.7" y2="282.7" stroke="#352e22" stroke-width="1"/>
+<text x="60" y="286.7" fill="#a2967f" font-size="12" text-anchor="end">50 %</text>
+<line x1="70" x2="870" y1="216.0" y2="216.0" stroke="#352e22" stroke-width="1"/>
+<text x="60" y="220.0" fill="#a2967f" font-size="12" text-anchor="end">75 %</text>
+<line x1="70" x2="870" y1="149.3" y2="149.3" stroke="#352e22" stroke-width="1"/>
+<text x="60" y="153.3" fill="#a2967f" font-size="12" text-anchor="end">100 %</text>
+<text x="70.0" y="438" fill="#a2967f" font-size="12" text-anchor="middle">0k</text>
+<text x="203.3" y="438" fill="#a2967f" font-size="12" text-anchor="middle">2k</text>
+<text x="336.7" y="438" fill="#a2967f" font-size="12" text-anchor="middle">4k</text>
+<text x="470.0" y="438" fill="#a2967f" font-size="12" text-anchor="middle">6k</text>
+<text x="603.3" y="438" fill="#a2967f" font-size="12" text-anchor="middle">8k</text>
+<text x="736.7" y="438" fill="#a2967f" font-size="12" text-anchor="middle">10k</text>
+<text x="870.0" y="438" fill="#a2967f" font-size="12" text-anchor="middle">12k</text>
+<text x="470.0" y="466" fill="#a2967f" font-size="12" text-anchor="middle">taps on this wallet today (24-h epoch)</text>
+<polygon points="93.3,135.1 140.0,129.8 186.7,112.7 233.3,110.9 280.0,118.0 326.7,131.4 373.3,160.6 420.0,185.7 466.7,214.4 513.3,244.4 560.0,280.1 606.7,310.5 653.3,336.4 700.0,356.2 746.7,370.4 793.3,382.3 840.0,390.8 840.0,395.1 793.3,388.0 746.7,379.5 700.0,368.1 653.3,352.6 606.7,335.5 560.0,315.4 513.3,295.5 466.7,267.1 420.0,246.4 373.3,226.8 326.7,212.8 280.0,197.3 233.3,178.8 186.7,161.3 140.0,161.3 93.3,167.1" fill="#f5b631" fill-opacity="0.18"/>
+<line x1="470.0" x2="470.0" y1="96" y2="416" stroke="#a2967f" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="478.0" y="114" fill="#f2ebdd" font-size="12">Smart swap from 6k</text>
+<text x="478.0" y="130" fill="#a2967f" font-size="12">wallet earns ~60 % here</text>
+<polyline points="93.3,150.6 140.0,147.7 186.7,141.2 233.3,144.8 280.0,156.0 326.7,171.4 373.3,193.8 420.0,216.9 466.7,242.3 513.3,273.8 560.0,297.6 606.7,324.0 653.3,344.9 700.0,362.0 746.7,374.9 793.3,385.4 840.0,392.8" fill="none" stroke="#f5b631" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="373.3" cy="193.8" r="4.5" fill="#f5b631" stroke="#1c1913" stroke-width="2"/>
+<text x="381.3" y="179.8" fill="#f2ebdd" font-size="13" font-weight="600">83 %</text>
+<circle cx="560.0" cy="297.6" r="4.5" fill="#f5b631" stroke="#1c1913" stroke-width="2"/>
+<text x="568.0" y="283.6" fill="#f2ebdd" font-size="13" font-weight="600">44 %</text>
+<circle cx="746.7" cy="374.9" r="4.5" fill="#f5b631" stroke="#1c1913" stroke-width="2"/>
+<text x="754.7" y="360.9" fill="#f2ebdd" font-size="13" font-weight="600">15 %</text>
+<line x1="640" x2="664" y1="82" y2="82" stroke="#f5b631" stroke-width="2.5"/><text x="672" y="86" fill="#a2967f" font-size="12">median</text>
+<rect x="740" y="76" width="24" height="12" fill="#f5b631" fill-opacity="0.18"/><text x="772" y="86" fill="#a2967f" font-size="12">middle 50 %</text>
+</svg>
