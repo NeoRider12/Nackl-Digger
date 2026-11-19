@@ -29,8 +29,6 @@
   .seg-run { background: var(--ok); color: #10200f; }
   .seg-ready { background: var(--gold); color: #1a1406; }
   .seg-old { background: #5a5040; color: var(--fg); }
-  .seg-new { background: #6fb7e8; color: #0d1a24; }
-  .seg-unk { background: #3a342a; color: var(--muted); }
   .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
   .legend div { display: grid; gap: 2px; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
@@ -73,14 +71,6 @@
     <div class="legend" id="legend"></div>
   </section>
 
-  <section class="card" id="rollout" hidden>
-    <h2>Node software rollout (estimated)</h2>
-    <div class="big"><b id="roPct">–</b><span id="roText">of the stake runs node 0.19.7 or newer</span></div>
-    <div class="bar" id="roBar"></div>
-    <div class="legend" id="roLegend"></div>
-    <p class="note"><b>How this is read:</b> the API has no field for the node version. But since node 0.19.7 the setting <code>snapshot_partition_size_bytes</code> is always part of the protocol identifier (<a href="https://github.com/ackinacki/ackinacki/blob/main/CHANGELOG.md" target="_blank" rel="noopener">changelog 0.19.7</a>). So the old step <code>…_1.0.7_0</code> gets the <b>same</b> config hash as the new one on 0.19.7 nodes, and a <b>different</b> one on 0.19.6 and older. Example: <code>3d1604…_1.0.7_0-&gt;3d1604…_1.0.8_0</code> = 0.19.7+, <code>272bab…_1.0.7_0-&gt;3d1604…_1.0.8_0</code> = 0.19.6 or older. A keeper's entry is only rewritten when its own epoch ends (about 24 h), so this lags up to a day behind the real rollout.</p>
-  </section>
-
   <section class="card why">
     <h2 id="whyH">Why hasn't it switched yet?</h2>
     <p class="verdict" id="verdict">–</p>
@@ -99,6 +89,7 @@
       <li><b>Complete</b> – all keepers show <code>B</code>. The next upgrade then appears here by itself as <code>B-&gt;C</code>; the page needs no update for it.</li>
     </ol>
     <p class="note"><b>Why the list can't show the switch:</b> a keeper's entry comes from its epoch contract and is only rewritten when its ~24-h epoch ends – and what it writes there is what its node <i>software</i> supports. A node build that supports both versions may keep writing <code>A-&gt;B</code> even after the network runs <code>B</code>. The public API has no field for the protocol version of the blocks. Example 1.0.7 → 1.0.8 (Nov 2026): the list stayed at 100 % <code>1.0.7-&gt;1.0.8</code> for days while most keepers renewed their epochs – yet since 3 Nov around 10:55 CET the mining verifier already counts the mining time from the hard leaves (⌊n × 4.7⌋), the rule from the 1.0.8 changelog.</p>
+    <p class="note"><b>Two spellings of the same step:</b> since Nov 2026 the entries show <code>1.0.7 → 1.0.8</code> with two different config hashes in front of <code>_1.0.7_0</code> (<code>272bab…</code> and <code>3d1604…</code>). This page compares the steps by version number, so both count as the same step. The hash does <b>not</b> tell the node version: according to the team, all 252 keepers already run node 0.19.7 (19 Nov).</p>
     <p class="note">So the remaining keepers decide when it happens. If their operators have already installed the new node, the switch comes right after the last of their epochs ends. If not, it waits until they update – or until they leave the set. A new keeper that joins with the old version would hold it back again.</p>
   </section>
 
@@ -178,7 +169,6 @@ function render(d) {
   const step = Object.entries(sup).filter(([v]) => v.includes('->')).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
   const totalStake = bks.reduce((a, b) => a + Number(b.stake || 0), 0) || 1;
   const hold = step ? bks.filter(b => stepOf(b.protocol_version_support) !== step) : [];
-  renderRollout(bks, totalStake);
   const vEl = document.getElementById('verdict'); const hEl = document.getElementById('holdouts');
   const when = (seq) => { const h = (seq - d.seq_no) * blockSec / 3600; const t = new Date(Date.now() + h * 3600e3); return { h, txt: t.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) }; };
   const label = (v) => v.includes('->') ? v.split('->').map((x) => (x.includes('_') ? ver(x) : x)).join(' → ') : (v.includes('_') ? ver(v) : v);
@@ -239,30 +229,6 @@ function render(d) {
   drawChart(future);
   const gen = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   document.getElementById('meta').textContent = `block #${d.seq_no.toLocaleString()} · ${n} keepers · ${gen}`;
-}
-
-// Node-Software-Stand aus dem Config-Hash: gleicher Hash links und rechts vom Pfeil = Node 0.19.7+
-// (dort zählt snapshot_partition_size_bytes immer), verschieden = 0.19.6 oder älter
-function renderRollout(bks, totalStake) {
-  const box = document.getElementById('rollout');
-  const g = { neu: { n: 0, s: 0 }, alt: { n: 0, s: 0 }, unk: { n: 0, s: 0 } };
-  for (const b of bks) {
-    const v = b.protocol_version_support || '';
-    const st = Number(b.stake || 0);
-    const k = v.includes('->') ? (v.split('->')[0].split('_')[0] === v.split('->')[1].split('_')[0] ? 'neu' : 'alt') : 'unk';
-    g[k].n += 1; g[k].s += st;
-  }
-  if (!g.neu.n && !g.alt.n) { box.hidden = true; return; }
-  box.hidden = false;
-  const pct = (x) => (x / totalStake * 100).toFixed(1);
-  document.getElementById('roPct').textContent = Math.round(g.neu.s / totalStake * 100) + '%';
-  document.getElementById('roText').textContent = `of the stake runs node 0.19.7 or newer – ${g.neu.n} of ${bks.length} block keepers`;
-  const seg = (cls, v, label) => v ? `<div class="${cls}" style="flex-grow:${v}" title="${label}: ${v}">${v}</div>` : '';
-  document.getElementById('roBar').innerHTML = seg('seg-new', g.neu.n, 'node 0.19.7+') + seg('seg-old', g.alt.n, 'node 0.19.6 or older') + seg('seg-unk', g.unk.n, 'no step announced – version unknown');
-  document.getElementById('roLegend').innerHTML =
-    `<div><span><i style="background:#6fb7e8"></i>Node 0.19.7 or newer</span><b>${g.neu.n} · ${pct(g.neu.s)} %</b></div>` +
-    `<div><span><i style="background:#5a5040"></i>Node 0.19.6 or older</span><b>${g.alt.n} · ${pct(g.alt.s)} %</b></div>` +
-    (g.unk.n ? `<div><span><i style="background:#3a342a"></i>No step announced (can't tell)</span><b>${g.unk.n} · ${pct(g.unk.s)} %</b></div>` : '');
 }
 
 function drawChart(hours) {
