@@ -37,7 +37,7 @@
 - 🌙 **Smart swap (S-wallets)**
 - **Why:** the NACKL per session falls with the taps a wallet already has that day – roughly full value up to ~5k taps, about half at ~7k, a quarter at ~8k, and nothing after 12 000 (Miner contract). A fresh wallet earns full value even late in the day
 - **Mark reserve wallets:** long press (0.6 s) on a wallet's power button → a small pulsing **S**. Long press again removes it. S-wallets stay off until they are needed
-- **The rule:** a running wallet **above its *Swap from* value** (default 6,000 taps today; wallet sheet: 5k · 6k · 8k · 10k · **12k** – with 12k it runs to the daily limit, e.g. for the top ten) whose **last 6 payouts** are **15 % below** what the best free S-wallet would earn now (fresh value, minus its own taps today) is switched off, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
+- **The rule:** a running wallet **above its *Earliest swap* value** (default 6,000 taps today; wallet sheet: 5k · 6k · 8k · 10k · **12k** – with 12k it runs to the daily limit, e.g. for the top ten) whose **last 6 payouts** are **15 % below** what the best free S-wallet would earn now (fresh value, minus its own taps today) is switched off, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
 - **Daily limit reached:** when a wallet stops at 12,000 taps, the best free S-wallet takes over for the rest of the day
 - **New 24-h day:** swapped-in S-wallets go off, the original wallets come back on
 - **Knows your wallets:** the expected value per session is learned from each wallet's own payouts while it has fewer than 4,000 taps that day; until then it is estimated from the **wallet level**, read from the chain (S-wallets that are off are checked every 30 min). The wallet sheet shows level, *fresh*, *now* and the last 6 payouts – **forget** deletes a learned value. ⚙ → *Smart swap · S-wallets* explains it all and lists your S-wallets
@@ -142,12 +142,12 @@
   <img src="docs/screenshots/NacklDigger-Android-portrait.png" height="520" alt="Tablet in portrait with six wallets">
   <img src="docs/screenshots/NacklDigger-Android-wallet-sheet.png" height="520" alt="Wallet sheet with level, Smart values and Boost · Popit Game">
 </p>
-<p align="center"><em>Tablet in portrait with six wallets · wallet sheet with level, Smart values, *Swap from* and Boost · Popit Game – farm, MamaBoard, login status (demo values)</em></p>
+<p align="center"><em>Tablet in portrait with six wallets · wallet sheet with level, Smart values, *Earliest swap* and Boost · Popit Game – farm, MamaBoard, login status (demo values)</em></p>
 
 **Comfort & safety**
 - Header with CPU load, **GPU %**, device temperature, network quality, **Pace** and success rate (wallets that are ON). *Pace %* shows how much of what the wallets want to send to the block producer the shared budget allows – ~100 % with 1–2 wallets, much lower when many wallets share a tight line; great for comparing connections or VPN exits. ⚙ → *Statistics* keeps min/max of Net, Pace, battery temperature and difficulty since app start, and shows what your connection tolerates at the block producer (*Line ≈ N/min*, measured with 5–6 wallets in 15–20 min). *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through. While all wallets rest, *Net ~31 %* (dashed) keeps the last value measured while submitting instead of the much higher read-only value
 - Heat protection: switches the wallets off when the device gets too hot and **back on by itself once it has cooled down** (background mode stays active meanwhile); daily tap limit; optional off at the new 24-h epoch and back on after 1–16 h (− / +, default 8 h) – *Apply now* also uses it for the day already running; only wallets that were running (or stopped at the daily limit) come back, wallets already off stay in standby, S-wallets too
-- **Encrypted backup** of settings and all pairings, S-wallet marks, *Swap from* and AUTO/MANUAL (restore after reinstalling; Boost logins connect again)
+- **Encrypted backup** of settings and all pairings, S-wallet marks, *Earliest swap* and AUTO/MANUAL (restore after reinstalling; Boost logins connect again)
 - **App update** (⚙ → Backup): the button lights up when a newer release is on GitHub and downloads the APK
 - **Quit app** (⚙ header, tap twice) closes the app completely – also when it's locked in the recent-apps view. The **back button** only sends the app to the background, it keeps mining
 - **Balances:** locked/unlocked total of all wallets in ⚙ → *Statistics*, once an hour in the log
@@ -191,7 +191,7 @@ First tap ☾ **BG** in the header (or ⚙ → *Set up background mode*) and tic
 **Most reliable alternative:** leave the app in front with **⚙ → Dim screen while digging → Extreme −100 %**. The screen stays on but is fully black with the lowest backlight, so Android treats the app as in use and doesn't end it – a tap lights it up again. Best on the charger. The log shows free memory every 10 minutes (*Memory: … MB free*), warns with *Memory LOW* when Android may start ending apps, and – on Android 11 and newer – tells you after a restart why Android ended the app.
 
 **What is Smart swap and when should I use it?**
-If you have more wallets than slots that run well on a device (see the performance test), mark the extra ones as **S-wallets** (long press on the power button). They wait while your main wallets dig and take over automatically once a main wallet is above its *Swap from* value (default 6,000 taps today) and earns at least 15 % less than the S-wallet would – usually in the second half of the 24-h day. When a wallet reaches the daily limit, a free S-wallet takes over too. With *Swap from 12k* (wallet sheet) a wallet is never swapped out early. At the new day the main wallets come back. Important: an S-wallet must not be switched on on another device or in another app at the same time.
+If you have more wallets than slots that run well on a device (see the performance test), mark the extra ones as **S-wallets** (long press on the power button). They wait while your main wallets dig and take over automatically once a main wallet is above its *Earliest swap* value (default 6,000 taps today) and earns at least 15 % less than the S-wallet would – usually in the second half of the 24-h day. When a wallet reaches the daily limit, a free S-wallet takes over too. With *Earliest swap 12k* (wallet sheet) a wallet is never swapped out early. At the new day the main wallets come back. Important: an S-wallet must not be switched on on another device or in another app at the same time.
 
 **Nothing gets through – what can I try?**
 Work through this list – most problems are solved by the first points:
@@ -230,8 +230,8 @@ Because the NACKL per session falls with the taps a wallet already has that day.
 
 ![Payout per session vs. taps that day: flat up to ~2,800 taps, then falling to ~60 % at 6k and ~15 % at 10k](docs/daily-curve.svg)
 
-**Restore mining – when?**
-If a wallet keeps failing while others succeed: wallet sheet → *Restore mining*. It clears an old session on chain and reconnects. The app also does this by itself after repeated failures, and it rebuilds a wallet's engine by itself if that stops answering.
+**Restore – when?**
+If a wallet keeps failing while others succeed: wallet sheet → *Restore*. It clears an old session on chain and reconnects. The app also does this by itself after repeated failures, and it rebuilds a wallet's engine by itself if that stops answering.
 
 ## Security and privacy
 
