@@ -1,13 +1,14 @@
 NeoRider patch 0004 on top of NewGoblin 0001-0003 (gosh-sh/bee-engine v6.0.0, commit 015bc466613e7b7c41f272dc16ba0cacbf0e4d93).
 - Lighter miner event polling: every 2.5 s only while a worker is alive, otherwise 10 s; last 25 instead of 100 events.
-- get_miner_data also returns easy_complexity / hard_complexity (for the difficulty badge).
+- get_miner_data also returns easy_complexity / hard_complexity (difficulty) and mbi_cur (wallet level, for Smart swap).
 - benchmark_hashes(complexity, ms): performance test with the miner's own leaf hash.
 License: AGPL-3.0-only (same as upstream).
 
 diff --git a/bee_miner/src/wasm/miner.rs b/bee_miner/src/wasm/miner.rs
+index 36eb811..93bf5f0 100644
 --- a/bee_miner/src/wasm/miner.rs
 +++ b/bee_miner/src/wasm/miner.rs
-@@ -162,7 +162,11 @@
+@@ -162,7 +162,11 @@ impl Miner {
              let mut seen_events = VecDeque::new();
  
              while !dropped_ref.get() {
@@ -21,15 +22,18 @@ diff --git a/bee_miner/src/wasm/miner.rs b/bee_miner/src/wasm/miner.rs
  
                  let decoded_events =
 diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
+index 82eb381..7226ac2 100644
 --- a/bee_miner/src/wasm/mod.rs
 +++ b/bee_miner/src/wasm/mod.rs
-@@ -1,4 +1,5 @@
+@@ -1,5 +1,7 @@
  use ackinacki_kit::contracts::deserialize::deserialize_u128;
 +use ackinacki_kit::contracts::deserialize::deserialize_u32;
  use ackinacki_kit::contracts::deserialize::deserialize_u64;
++use ackinacki_kit::contracts::deserialize::deserialize_option_u64;
  use ackinacki_kit::contracts::event::query_events;
  use ackinacki_kit::contracts::mvsystem;
-@@ -43,6 +44,13 @@
+ use ackinacki_kit::contracts::mvsystem::miner::events::DecodedMinerEvent;
+@@ -43,6 +45,18 @@ pub struct MinerAccountData {
  
      #[serde(alias = "_tapSum5m", deserialize_with = "deserialize_u128")]
      pub tap_sum_5m: u128,
@@ -40,10 +44,15 @@ diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
 +
 +    #[serde(alias = "_hardComplexity", deserialize_with = "deserialize_u32", default)]
 +    pub hard_complexity: u32,
++
++    // NeoRider patch 0004: current boost index of the wallet (`_mbiCur`, the wallet level) –
++    // the app uses it as a first estimate of the payout per session (Smart swap).
++    #[serde(alias = "_mbiCur", deserialize_with = "deserialize_option_u64", default)]
++    pub mbi_cur: Option<u64>,
  }
  
  #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-@@ -79,7 +87,8 @@
+@@ -79,7 +93,8 @@ async fn get_miner_events(
      seen: &mut std::collections::VecDeque<String>,
  ) -> Result<Vec<DecodedMinerEvent>, JsError> {
      let events =
@@ -53,7 +62,7 @@ diff --git a/bee_miner/src/wasm/mod.rs b/bee_miner/src/wasm/mod.rs
              .await
              .map_err(|e| JsError::new(&format!("Query miner events ({e})")))?;
      let fresh = events
-@@ -100,3 +109,39 @@
+@@ -100,3 +115,39 @@ async fn get_miner_events(
      }
      Ok(decoded)
  }

@@ -35,9 +35,9 @@
 - 🌱 **Boost auto-claim** – connect a wallet once and the app claims the Popit Game farm boost 5× a day and upgrades your MamaBoard when you have enough boost
 - ↔️ **Swap places** – hold a wallet's name for 1.5 s and drag it onto another; *Wallet 1, 2, …* stay with the position, colours move with the wallet
 - 🌙 **Smart swap (S-wallets)**
-- **Why:** the NACKL per session falls with the taps a wallet already has that day – roughly full value up to ~5k taps, about half at ~7k, a quarter at ~8k, and nothing after 12 000 (Miner contract). A fresh wallet earns full value even late in the day
+- **Why:** the NACKL per session falls with the taps a wallet already has that day – full value up to ~2,800 taps, about 60 % at 6k, a third at 8.5k, a fifth at 10k, and nothing after 12 000 (Miner contract). A fresh wallet earns full value even late in the day
 - **Mark reserve wallets:** long press (0.6 s) on a wallet's power button → a small pulsing **S**. Long press again removes it. S-wallets stay off until they are needed
-- **The rule:** a running wallet **above its *Earliest swap* value** (default 6,000 taps today; wallet sheet: 4k · 5k · 6k · 8k · 10k · **12k** – with 12k it runs to the daily limit, e.g. for the top ten) whose **last 6 payouts** are **15 % below** what the best free S-wallet would earn now (fresh value, minus its own taps today) is switched off, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
+- **The rule:** a running wallet **above its *Earliest swap* value** (default 6,000 taps today; wallet sheet: 4k · 5k · 6k · 8k · 10k · **12k** – with 12k it runs to the daily limit, e.g. for the top ten) whose **last 6 payouts** are **15 % below** what the best free S-wallet would earn now (fresh value, minus its own taps today) is switched off – right after crossing the threshold, until 6 such payouts exist, its value is estimated from its fresh value and the measured curve, so the swap doesn't wait 40–80 min, the S-wallet on (*Smart swap: … → …* in the log). At most one swap per 20 min, a swapped-in wallet runs at least 1 h; when an S-wallet is worn out itself, the next one takes over
 - **Daily limit reached:** when a wallet stops at 12,000 taps, the best free S-wallet takes over for the rest of the day
 - **New 24-h day:** swapped-in S-wallets go off, the original wallets come back on
 - **Knows your wallets:** the expected value per session is learned from each wallet's own payouts while it has fewer than 4,000 taps that day; until then it is estimated from the **wallet level**, read from the chain (S-wallets that are off are checked every 30 min). The wallet sheet shows level, *fresh*, *now* and the last 6 payouts – **forget** deletes a learned value. ⚙ → *Smart swap · S-wallets* explains it all and lists your S-wallets
@@ -58,7 +58,7 @@
 - **Fewer wallets keep the ones in front:** with *Wallets on this device* = 6 the first 6 are shown; the others are only hidden (pairing kept) and come back when you raise the number. ⚙ Settings lists hidden paired wallets
 
 **Background mode (optional)** – keeps the app alive behind other apps and for boost claims: ☾ BG in the header, with a step-by-step setup (notifications, battery, manufacturer settings) and a notification with a Stop button. For mining, keep the app in front with the screen dimmed to black (⚙ → *Extreme −100 %*)
-- 📶 **Network-friendly with many wallets** – staggered starts and sessions, shared status reads, smart resubmission and endpoint failover
+- 📶 **Network-friendly with many wallets** – staggered starts and sessions, shared status reads, smart resubmission, late proof and endpoint failover
 - 💰 **Today's NACKL next to every wallet**, rewards claimed automatically, per-epoch overview of sessions and payouts
 - ⛏️ **See every result at a glance** – a gold-laden pickaxe for a confirmed session, a pickaxe bursting apart in slow motion for a failed one, a spinning $NACKL coin for every payout – right in the wallet's box, no pop-up messages covering the other wallets
 - 🔒 **Your wallet key never leaves the AN Wallet** – no account, no ads, no tracking
@@ -79,7 +79,7 @@
 
 1. **Install** the APK from [Releases](https://github.com/NeoRider12/Nackl-Digger/releases/latest).
 2. **Pair** your AN Wallet: tap a wallet → *Wallet Connect* → confirm the connection and the mining key in the AN Wallet.
-3. **Press the wallet's power button** – it starts in **AUTO** and the app taps every 1.7 s for you (70 taps over about 2 minutes count per epoch of ~5.5 min).
+3. After pairing the wallet **switches on by itself** (the power button stops and starts it) – it runs in **AUTO** and the app taps every 1.7 s for you (70 taps over about 2 minutes count per epoch of ~5.5 min).
 4. Best results: keep the app in front on the charger with ⚙ → **Dim screen while digging → Extreme −100 %**, and run ⚙ → **Performance test** before adding more wallets. ☾ **BG** keeps the app alive in the background (boost claims, short breaks).
 5. The app **submits** each session and shows `✓ confirmed` or `✗ …`. **NACKL arrives** in your wallet a few minutes later – the app claims it for you.
 
@@ -109,6 +109,8 @@
 
 **When the network is busy**
 - **Smart resubmission:** root and proof are signed once and resent unchanged on *queue full*, timeouts and gateway errors – the node recognises repeats instead of queueing copies
+- **Late proof:** if a proof gets no answer within its 240 s lifetime, it is signed again and sent on (up to 720 s) instead of giving up and clearing the session on chain – that clean-up is one more message through the full queue and earns nothing. Side by side on two tablets: 79 of 96 late proofs accepted, about a third more confirmed sessions per wallet and hour (engine patch [`0006`](bee-engine/0006-neorider-late-proof.patch))
+- **Fresh token:** the block producer token is valid for 5 minutes; it is renewed before it expires, so sends aren't rejected as *token expired*
 - **Knocks until it's in:** every submission goes to both endpoints and the active block producer at once and keeps knocking for up to 55 s; a slow answer is not cut off (it is often the one being accepted) – a new attempt simply runs alongside
 - **Never stuck:** if the engine of a wallet stops answering, the session is closed and the engine rebuilt – the wallet keeps digging. If multi-core fails once, the next rebuild tries it again instead of leaving all wallets on one core until a restart
 - **Shared pace for the block producer:** only the block producer answers *429 Too Many Requests* (several devices on one connection count together). All wallets of a device share one request budget for it that shrinks on every 429 and grows slowly again while it's calm – it settles just below the limit instead of swinging between full speed and brake. The endpoints and parallel connections are not throttled
@@ -118,7 +120,7 @@
 - **Self-healing:** reads the session state from the contract if the node's events don't arrive, clears a stuck session on chain, auto-restore after repeated failures
 
 **Payouts**
-- **Automatic claiming:** if a confirmed epoch is not paid out with the next session in time, the app sends `get_reward` itself, so rewards don't expire – but never while a session of that wallet is being submitted, so the two can't get in each other's way
+- **Automatic claiming:** if a confirmed epoch is not paid out with the next session in time, the app sends `get_reward` itself at the last moment (retried every minute until it gets through), so rewards don't expire – but never while a session of that wallet is being submitted, so the two can't get in each other's way
 - **NACKL today** next to every wallet name (current 24-h day)
 - ⚙ → Statistics: **NACKL today · ≈ expected · yesterday** of all wallets on the device
 - **Automatic log** (optional): saved to Downloads at 00:00 · 08:00 · 16:00
@@ -145,8 +147,9 @@
 <p align="center"><em>Tablet in portrait with six wallets · wallet sheet with level, Smart values, *Earliest swap* and Boost · Popit Game – farm, MamaBoard, login status (demo values)</em></p>
 
 **Comfort & safety**
-- Header with CPU load, **GPU %**, device temperature, network quality, **Pace** and success rate (wallets that are ON). *Pace %* shows how much of what the wallets want to send to the block producer the shared budget allows – ~100 % with 1–2 wallets, much lower when many wallets share a tight line; great for comparing connections or VPN exits. ⚙ → *Statistics* keeps min/max of Net, Pace, battery temperature and difficulty since app start, and shows what your connection tolerates at the block producer (*Line ≈ N/min*, measured with 5–6 wallets in 15–20 min). *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through. While all wallets rest, *Net ~31 %* (dashed) keeps the last value measured while submitting instead of the much higher read-only value
+- Header with CPU load, **GPU %**, device temperature, network quality, **Pace** and success rate (wallets that are ON; tap ✓ to also see the last hour – how busy the network is right now). *Pace %* shows how much of what the wallets want to send to the block producer the shared budget allows – ~100 % with 1–2 wallets, much lower when many wallets share a tight line; great for comparing connections or VPN exits. ⚙ → *Statistics* keeps min/max of Net, Pace, battery temperature and difficulty since app start, and shows what your connection tolerates at the block producer (*Line ≈ N/min*, measured with 5–6 wallets in 15–20 min). *Net %* is honest: it counts every single submit answer including retries (*queue full*, 429, no answer), so it shows how tough the network really is – the ✓ rate next to it shows what still got through. While all wallets rest, *Net ~31 %* (dashed) keeps the last value measured while submitting instead of the much higher read-only value
 - Heat protection: switches the wallets off when the device gets too hot and **back on by itself once it has cooled down** (background mode stays active meanwhile); daily tap limit; optional off at the new 24-h epoch and back on after 1–16 h (− / +, default 8 h) – *Apply now* also uses it for the day already running; only wallets that were running (or stopped at the daily limit) come back, wallets already off stay in standby, S-wallets too
+- **Help on every symbol:** tap a chip, dot or small symbol (GPU %, CPU, Net, tap dots, ⇄ tag …) for a short explanation, hold buttons like *Earliest swap*; ⚙ → *What you see on a wallet* explains every element of a wallet card
 - **Encrypted backup** of settings and all pairings, S-wallet marks, *Earliest swap* and AUTO/MANUAL (restore after reinstalling; Boost logins connect again)
 - **App update** (⚙ → Backup): the button lights up when a newer release is on GitHub and downloads the APK
 - **Quit app** (⚙ header, tap twice) closes the app completely – also when it's locked in the recent-apps view. The **back button** only sends the app to the background, it keeps mining
@@ -226,7 +229,7 @@ The nodes limit requests per internet connection, and all devices on it count to
 The app tries **WebGPU** first (Chrome/WebView allows it on Android 12+ for Qualcomm Adreno, ARM Mali and Intel; PowerVR from Android 16) and otherwise **OpenGL ES 3.1** compute – that covers e.g. Samsung Xclipse (Exynos) and older phones below Android 12. The log says at start which way is used (*GPU assist: on – … self-test passed*); ⚙ → *Performance test* shows the speed. If neither works, the app mines on the CPU as before.
 
 **Why does a wallet earn less per session late in the day?**
-Because the NACKL per session falls with the taps a wallet already has that day. Measured over 13 days and ~19,000 payouts (Nov 2026): full value up to ~2,800 taps, then about 83 % at 4.5k, 60 % at 6k, 44 % at 7.3k, 27 % at 8.7k and 15 % at 10k taps. Every single day showed the same shape. Other wallets are not affected – a fresh wallet earns full value even late in the day. That's why it pays to run your stronger wallets (higher NACKL per session) spread over your devices from the start of the 24-h day, and if you have more wallets than slots, to swap a wallet at ~5–6k taps for a fresh one (Smart swap does this from 6k). Never switch the same wallet on in two apps or on two devices at the same time.
+Because the NACKL per session falls with the taps a wallet already has that day. Measured over 13 days and ~19,000 payouts (Nov 2026): full value up to ~2,800 taps, then about 83 % at 4.5k, 60 % at 6k, 44 % at 7.3k, 27 % at 8.7k and 15 % at 10k taps. Every single day showed the same shape. Re-measured on 25/26 Nov with 16 wallets running past 10k: the tail is a little higher than the chart – about 20 % at 10k and 12 % at 11.5k. Other wallets are not affected – a fresh wallet earns full value even late in the day. That's why it pays to run your stronger wallets (higher NACKL per session) spread over your devices from the start of the 24-h day, and if you have more wallets than slots, to swap a wallet at ~5–6k taps for a fresh one (Smart swap does this from 6k). Never switch the same wallet on in two apps or on two devices at the same time.
 
 ![Payout per session vs. taps that day: flat up to ~2,800 taps, then falling to ~60 % at 6k and ~15 % at 10k](docs/daily-curve.svg)
 

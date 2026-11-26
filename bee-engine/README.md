@@ -1,7 +1,7 @@
 # Patched Bee Engine SDK
 
 The Android build uses `gosh-sh/bee-engine` **v6.0.0** (commit `015bc466613e7b7c41f272dc16ba0cacbf0e4d93`)
-with five patches, applied in file-name order:
+with six patches, applied in file-name order:
 
 | Patch | From | What it does |
 |---|---|---|
@@ -10,6 +10,7 @@ with five patches, applied in file-name order:
 | `0003-newgoblin-premine-chain-wait.patch` | goblingames (NewGoblin) | Premine waits when the chain read is one seed rotation behind. |
 | `0004-neorider-polling-difficulty-benchmark.patch` | NeoRider | Miner events polled every 2.5 s only while a worker is alive (else 10 s), last 25 instead of 100 events; `get_miner_data` returns `easy_complexity` / `hard_complexity` and `mbi_cur` (wallet level); `benchmark_hashes(complexity, ms)` for the performance test. |
 | `0005-neorider-gpu-assist.patch` | NeoRider | **GPU assist**: `tap_params()` returns the next tap leaf's `{seed, index, complexity}` (JSON); `add_tap_nonce(x, y, now_ms, nonce_lo, nonce_hi)` queues a tap with a nonce found by the app on the GPU (WebGPU or OpenGL ES). The engine computes and checks the leaf itself and falls back to its own CPU search if the nonce does not meet the target; `tap_computed` reports `gpu: true/false`. |
+| `0006-neorider-late-proof.patch` | NeoRider | **Late proof**: if the proof deadline from `set_submit_policy` is longer than the message expiry (240 s), an expired, unanswered proof is signed again with the same parameters and delivery goes on until the deadline (max. 3 renewals, diag event `proof_renewed`) instead of giving up and cancelling the commit. The app sets 720 s by default (2 renewals); with a 240 s deadline nothing changes. |
 
 Patches 0001–0003 and `Cargo.lock` are taken unchanged from the Corresponding Source published by
 goblingames: https://github.com/andresCadavidT/goblingames/tree/main/source/bee-sdk-6.0.0-ng.3 –
